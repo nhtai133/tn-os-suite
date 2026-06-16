@@ -1,147 +1,91 @@
 "use client";
 
-import { useState } from "react";
-import { useDecisionStore, type Decision } from "@/store/useDecisionStore";
-import { Card, Badge, Button, Table } from "@tn-os/ui";
+import Link from "next/link";
+import { Badge, Card, Table } from "@tn-os/ui";
+import { useDecisionStore, type Decision, type DecisionStatus } from "@/store/useDecisionStore";
+import { OS_LABELS } from "@/store/useSnapshotStore";
+import type { OSType } from "@tn-os/schemas";
 
-const CATEGORIES = ["Investing", "Trading", "Crypto", "Business", "Life", "Tech", "Real Estate", "Other"];
-const OS_OPTIONS = ["investment_os", "trading_os", "crypto_os", "stocks_os", "business_os", "wealth_os", "none"];
-
-const riskVariant = { low: "success" as const, medium: "warning" as const, high: "danger" as const };
-
-const EMPTY_FORM: Omit<Decision, "decision_id"> = {
-  title: "", category: "Investing", linked_os: "investment_os",
-  context: "", options: ["", ""], chosen_option: "", reason: "",
-  risk: "medium", date: new Date().toISOString().split("T")[0] ?? "",
-  review_date: "", outcome: "",
+const statusVariant: Record<DecisionStatus, "info" | "success" | "warning" | "neutral"> = {
+  open: "info",
+  decided: "warning",
+  reviewed: "success",
+  archived: "neutral",
 };
+
+function isDue(reviewDate: string): boolean {
+  if (!reviewDate) return false;
+  return new Date(`${reviewDate}T23:59:59`).getTime() <= Date.now();
+}
 
 export default function DecisionsPage() {
   const store = useDecisionStore();
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<Decision | null>(null);
-  const [form, setForm] = useState<Omit<Decision, "decision_id">>(EMPTY_FORM);
-
-  function handleEdit(d: Decision) {
-    setEditing(d);
-    const { decision_id, ...rest } = d;
-    void decision_id;
-    setForm(rest);
-    setShowForm(true);
-  }
-
-  function handleSubmit() {
-    if (editing) {
-      store.updateDecision({ ...form, decision_id: editing.decision_id, options: form.options.filter(Boolean) });
-    } else {
-      store.addDecision({ ...form, decision_id: crypto.randomUUID(), options: form.options.filter(Boolean) });
-    }
-    setForm(EMPTY_FORM);
-    setEditing(null);
-    setShowForm(false);
-  }
+  const openCount = store.decisions.filter((decision) => decision.status === "open").length;
+  const dueCount = store.decisions.filter((decision) => decision.status !== "archived" && isDue(decision.review_date)).length;
+  const reviewedCount = store.decisions.filter((decision) => decision.status === "reviewed").length;
 
   if (!store.hydrated) return <div className="p-8 text-zinc-600 animate-pulse">Loading...</div>;
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
-      <div className="flex items-center justify-between">
+    <div className="p-8 space-y-6 max-w-6xl">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Decision Registry</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">{store.decisions.length} decisions tracked</p>
+          <p className="text-sm text-zinc-500 mt-0.5">Track major decisions, review outcomes, and improve decision quality.</p>
         </div>
-        <Button variant="primary" onClick={() => { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); }}>+ Add Decision</Button>
+        <Link href="/decisions/new" className="inline-flex items-center gap-2 rounded-lg border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500">
+          New Decision
+        </Link>
       </div>
 
-      {showForm && (
-        <Card title={editing ? "Edit Decision" : "New Decision"}>
-          <div className="grid grid-cols-2 gap-4 mt-2">
-            <div className="col-span-2">
-              <label className="block text-xs text-zinc-500 mb-1">Title</label>
-              <input value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500" placeholder="e.g. Buy BTC or wait?" />
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500 mb-1">Category</label>
-              <select value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500">
-                {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500 mb-1">Linked OS</label>
-              <select value={form.linked_os} onChange={(e) => setForm((p) => ({ ...p, linked_os: e.target.value }))} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500">
-                {OS_OPTIONS.map((o) => <option key={o}>{o}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500 mb-1">Risk</label>
-              <select value={form.risk} onChange={(e) => setForm((p) => ({ ...p, risk: e.target.value as Decision["risk"] }))} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500">
-                <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500 mb-1">Date</label>
-              <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500" />
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500 mb-1">Review Date</label>
-              <input type="date" value={form.review_date} onChange={(e) => setForm((p) => ({ ...p, review_date: e.target.value }))} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500" />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-xs text-zinc-500 mb-1">Context</label>
-              <textarea value={form.context} onChange={(e) => setForm((p) => ({ ...p, context: e.target.value }))} rows={2} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500 resize-none" />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-xs text-zinc-500 mb-1">Options (one per line)</label>
-              <textarea
-                value={form.options.join("\n")}
-                onChange={(e) => setForm((p) => ({ ...p, options: e.target.value.split("\n") }))}
-                rows={3}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500 resize-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500 mb-1">Chosen Option</label>
-              <input value={form.chosen_option} onChange={(e) => setForm((p) => ({ ...p, chosen_option: e.target.value }))} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500" />
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500 mb-1">Outcome (filled later)</label>
-              <input value={form.outcome} onChange={(e) => setForm((p) => ({ ...p, outcome: e.target.value }))} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500" />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-xs text-zinc-500 mb-1">Reason</label>
-              <textarea value={form.reason} onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))} rows={2} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500 resize-none" />
-            </div>
-          </div>
-          <div className="flex gap-2 mt-4">
-            <Button variant="primary" onClick={handleSubmit}>{editing ? "Update" : "Add Decision"}</Button>
-            <Button variant="ghost" onClick={() => { setShowForm(false); setEditing(null); }}>Cancel</Button>
-          </div>
-        </Card>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card title="Total"><div className="text-2xl font-bold text-white">{store.decisions.length}</div></Card>
+        <Card title="Open"><div className="text-2xl font-bold text-blue-400">{openCount}</div></Card>
+        <Card title="Due Review"><div className="text-2xl font-bold text-amber-400">{dueCount}</div></Card>
+        <Card title="Reviewed"><div className="text-2xl font-bold text-emerald-400">{reviewedCount}</div></Card>
+      </div>
 
       <Card>
         <Table<Decision>
           data={store.decisions}
-          keyExtractor={(d) => d.decision_id}
+          keyExtractor={(decision) => decision.id}
           emptyMessage="No decisions recorded yet."
           columns={[
-            { key: "title", header: "Decision", render: (d) => (
-              <div>
-                <div className="font-medium text-zinc-100">{d.title}</div>
-                <div className="text-xs text-zinc-500">{d.context.slice(0, 60)}{d.context.length > 60 ? "…" : ""}</div>
-              </div>
-            )},
-            { key: "category", header: "Category", render: (d) => <Badge variant="neutral">{d.category}</Badge> },
-            { key: "risk", header: "Risk", render: (d) => <Badge variant={riskVariant[d.risk]}>{d.risk}</Badge> },
-            { key: "chosen_option", header: "Chosen", render: (d) => <span className="text-zinc-300">{d.chosen_option || "—"}</span> },
-            { key: "date", header: "Date", render: (d) => <span className="text-zinc-500 text-xs">{d.date}</span> },
-            { key: "review_date", header: "Review", render: (d) => <span className="text-zinc-500 text-xs">{d.review_date || "—"}</span> },
-            { key: "actions", header: "", render: (d) => (
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => handleEdit(d)}>Edit</Button>
-                <Button variant="danger" size="sm" onClick={() => store.deleteDecision(d.decision_id)}>Del</Button>
-              </div>
-            )},
+            {
+              key: "title",
+              header: "Decision",
+              render: (decision) => (
+                <div>
+                  <Link href={`/decisions/${decision.id}`} className="font-medium text-zinc-100 hover:text-blue-400">
+                    {decision.title}
+                  </Link>
+                  <div className="text-xs text-zinc-500">{decision.context.slice(0, 80)}{decision.context.length > 80 ? "..." : ""}</div>
+                </div>
+              ),
+            },
+            { key: "category", header: "Category", render: (decision) => <Badge variant="neutral">{decision.category}</Badge> },
+            { key: "status", header: "Status", render: (decision) => <Badge variant={statusVariant[decision.status]}>{decision.status}</Badge> },
+            {
+              key: "linked_os",
+              header: "Linked OS",
+              render: (decision) => (
+                <div className="flex flex-wrap gap-1">
+                  {decision.linked_os.length === 0 && <span className="text-zinc-600">-</span>}
+                  {decision.linked_os.map((osType) => (
+                    <Badge key={osType} variant="neutral">{OS_LABELS[osType as OSType] ?? osType}</Badge>
+                  ))}
+                </div>
+              ),
+            },
+            { key: "review_date", header: "Review", render: (decision) => <span className={isDue(decision.review_date) ? "text-amber-400 text-xs" : "text-zinc-500 text-xs"}>{decision.review_date || "-"}</span> },
+            { key: "quality_score", header: "Quality", render: (decision) => <span className="text-zinc-300">{decision.quality_score ?? "-"}</span> },
+            {
+              key: "actions",
+              header: "",
+              render: (decision) => (
+                <Link href={`/decisions/${decision.id}`} className="text-xs text-blue-400 hover:text-blue-300">Open</Link>
+              ),
+            },
           ]}
         />
       </Card>

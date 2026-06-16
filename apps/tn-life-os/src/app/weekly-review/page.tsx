@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useSnapshotStore, CHILD_OS_TYPES, OS_LABELS } from "@/store/useSnapshotStore";
+import { useDecisionStore } from "@/store/useDecisionStore";
 import { isStale } from "@tn-os/sync";
 import { Card, Badge } from "@tn-os/ui";
 import type { TNOSSnapshot } from "@tn-os/schemas";
@@ -311,14 +312,22 @@ function BusinessReviewSection({ snap }: { snap: TNOSSnapshot }) {
 
 export default function WeeklyReviewPage() {
   const { snapshots, hydrated } = useSnapshotStore();
+  const decisionStore = useDecisionStore();
 
-  if (!hydrated) return <div className="p-8 text-zinc-600 animate-pulse">Loading...</div>;
+  if (!hydrated || !decisionStore.hydrated) return <div className="p-8 text-zinc-600 animate-pulse">Loading...</div>;
 
   const now = new Date();
   const weekStart = new Date(now);
   weekStart.setDate(now.getDate() - now.getDay() + 1);
 
   const hasAny = CHILD_OS_TYPES.some((t) => !!snapshots[t]);
+  const reviewCutoff = new Date();
+  reviewCutoff.setHours(23, 59, 59, 999);
+  const decisionsDue = decisionStore.decisions.filter((decision) => (
+    decision.status !== "archived" &&
+    decision.review_date &&
+    new Date(`${decision.review_date}T00:00:00`).getTime() <= reviewCutoff.getTime()
+  ));
 
   return (
     <div className="p-8 space-y-6 max-w-4xl">
@@ -328,6 +337,22 @@ export default function WeeklyReviewPage() {
           Week of {weekStart.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
         </p>
       </div>
+
+      <Card title="Decisions Due for Review" action={<Badge variant={decisionsDue.length > 0 ? "warning" : "success"}>{decisionsDue.length}</Badge>}>
+        <div className="space-y-3">
+          {decisionsDue.length === 0 && <p className="text-sm text-zinc-600">No decisions are due for review.</p>}
+          {decisionsDue.map((decision) => (
+            <a key={decision.id} href={`/decisions/${decision.id}`} className="block rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 transition-colors hover:border-blue-500/40">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-zinc-100">{decision.title}</span>
+                <Badge variant={decision.status === "reviewed" ? "success" : decision.status === "decided" ? "warning" : "info"}>{decision.status}</Badge>
+              </div>
+              <div className="mt-1 text-xs text-zinc-500">{decision.category} · Review date {decision.review_date}</div>
+              {decision.expected_outcome && <p className="mt-2 text-sm text-zinc-400">{decision.expected_outcome}</p>}
+            </a>
+          ))}
+        </div>
+      </Card>
 
       {CHILD_OS_TYPES.map((osType) => {
         const snap = snapshots[osType];

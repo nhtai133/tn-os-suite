@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Badge, Card, StatWidget } from "@tn-os/ui";
 import { useSnapshotStore } from "@/store/useSnapshotStore";
+import { useDecisionStore } from "@/store/useDecisionStore";
 import { generateCeoBriefing, type BriefingSection, type BriefingTone } from "@/lib/ai-ceo/generate-ceo-briefing";
 
 const toneBadge: Record<BriefingTone, "success" | "warning" | "danger" | "neutral"> = {
@@ -64,7 +65,9 @@ function RankedList({ title, items, variant = "neutral" }: { title: string; item
 
 export default function AiCeoPage() {
   const { snapshots, hydrated } = useSnapshotStore();
+  const decisionStore = useDecisionStore();
   const briefing = useMemo(() => generateCeoBriefing(snapshots), [snapshots]);
+  const openDecisions = decisionStore.decisions.filter((decision) => decision.status === "open").slice(0, 5);
   const sections = [
     briefing.sections.netWorthSummary,
     briefing.sections.allocationDrift,
@@ -74,7 +77,7 @@ export default function AiCeoPage() {
     briefing.sections.stocksExposure,
   ];
 
-  if (!hydrated) return <div className="p-8 text-zinc-600 animate-pulse">Loading...</div>;
+  if (!hydrated || !decisionStore.hydrated) return <div className="p-8 text-zinc-600 animate-pulse">Loading...</div>;
 
   return (
     <div className="p-8 space-y-6">
@@ -121,6 +124,23 @@ export default function AiCeoPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <RankedList title="Suggested Decisions" items={briefing.suggestedDecisions} variant="info" />
+        <Card title="Open Decisions">
+          <div className="space-y-3">
+            {openDecisions.length === 0 && <p className="text-sm text-zinc-600">No open decisions.</p>}
+            {openDecisions.map((decision) => (
+              <a key={decision.id} href={`/decisions/${decision.id}`} className="block rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 transition-colors hover:border-blue-500/40">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-zinc-100">{decision.title}</span>
+                  <Badge variant="info">{decision.category}</Badge>
+                </div>
+                <p className="mt-1 text-xs text-zinc-500">{decision.context.slice(0, 120)}{decision.context.length > 120 ? "..." : ""}</p>
+              </a>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <RankedList title="Weekly Action Plan" items={briefing.weeklyActionPlan} variant="neutral" />
       </div>
     </div>
