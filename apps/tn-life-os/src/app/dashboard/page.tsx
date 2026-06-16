@@ -55,18 +55,68 @@ function WealthWidget({ snapshot }: { snapshot: ReturnType<typeof useSnapshotSto
 function TradingWidget({ snapshot }: { snapshot: ReturnType<typeof useSnapshotStore>["snapshots"][OSType] }) {
   if (!snapshot) return <p className="text-zinc-600 text-sm">Not connected — import Trading OS snapshot.</p>;
   const s = snapshot.summary as Record<string, unknown>;
-  const risk = String(s["risk_status"] ?? "safe");
+  const stale = isStale(snapshot);
+  const ftmoRisk = String(s["ftmo_risk_status"] ?? s["risk_status"] ?? "Safe");
+  const riskVariant: "success" | "warning" | "danger" =
+    ftmoRisk === "Safe" ? "success" : ftmoRisk === "Warning" ? "warning" : "danger";
+  const weeklyPnl = Number(s["weekly_pnl"]) || 0;
+  const monthlyPnl = Number(s["monthly_pnl"]) || 0;
+  const dailyUsage = Number(s["daily_loss_usage_pct"]) || 0;
+  const maxUsage = Number(s["max_loss_usage_pct"]) || 0;
+  const disciplineScore = Number(s["discipline_score"]) || 0;
+  const bestSetup = String(s["best_setup"] ?? "—");
+  const worstMistake = String(s["worst_mistake"] ?? "—");
+  const focusNext = String(s["focus_setup_next_week"] ?? "—");
+  const violations = Array.isArray(s["rule_violations"]) ? (s["rule_violations"] as string[]) : [];
+  const winRate = Number(s["win_rate_pct"]) || 0;
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {stale && <Badge variant="warning">Snapshot is stale (&gt;7 days old)</Badge>}
+
       <div className="grid grid-cols-2 gap-3">
-        <StatWidget label="Equity" value={`$${(Number(s["equity"]) || 0).toFixed(0)}`} trend="neutral" />
-        <StatWidget label="Drawdown" value={`${(Number(s["drawdown_pct"]) || 0).toFixed(1)}%`} trend="down" />
-        <StatWidget label="Weekly PnL" value={`$${(Number(s["weekly_pnl"]) || 0).toFixed(0)}`} trend={(Number(s["weekly_pnl"]) || 0) >= 0 ? "up" : "down"} />
+        <StatWidget label="Equity" value={`$${(Number(s["total_equity"]) || 0).toLocaleString()}`} trend="neutral" />
+        <StatWidget label="Weekly PnL" value={`$${weeklyPnl.toFixed(0)}`} trend={weeklyPnl >= 0 ? "up" : "down"} />
+        <StatWidget label="Monthly PnL" value={`$${monthlyPnl.toFixed(0)}`} trend={monthlyPnl >= 0 ? "up" : "down"} />
+        <StatWidget label="Win Rate" value={`${winRate.toFixed(1)}%`} trend={winRate >= 50 ? "up" : "down"} />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
         <div>
-          <div className="text-xs text-zinc-500 uppercase tracking-widest mb-1">Risk</div>
-          <Badge variant={risk === "safe" ? "success" : risk === "caution" ? "warning" : "danger"}>{risk}</Badge>
+          <div className="text-xs text-zinc-500 uppercase tracking-widest mb-1">FTMO Risk</div>
+          <Badge variant={riskVariant}>{ftmoRisk}</Badge>
+        </div>
+        <div>
+          <div className="text-xs text-zinc-500 uppercase tracking-widest mb-1">Daily DD</div>
+          <span className={`text-sm font-semibold ${dailyUsage >= 70 ? "text-red-400" : "text-zinc-300"}`}>{dailyUsage.toFixed(1)}%</span>
+        </div>
+        <div>
+          <div className="text-xs text-zinc-500 uppercase tracking-widest mb-1">Max DD</div>
+          <span className={`text-sm font-semibold ${maxUsage >= 70 ? "text-red-400" : "text-zinc-300"}`}>{maxUsage.toFixed(1)}%</span>
         </div>
       </div>
+
+      <div className="space-y-1.5 text-xs border-t border-zinc-800 pt-3">
+        <div className="flex justify-between"><span className="text-zinc-500">Best Setup</span><span className="text-emerald-400">{bestSetup}</span></div>
+        <div className="flex justify-between"><span className="text-zinc-500">Common Mistake</span><span className="text-amber-400">{worstMistake}</span></div>
+        <div className="flex justify-between"><span className="text-zinc-500">Focus Next Week</span><span className="text-blue-400">{focusNext}</span></div>
+        <div className="flex justify-between"><span className="text-zinc-500">Discipline Score</span><span className="text-zinc-300">{disciplineScore}/100</span></div>
+      </div>
+
+      {violations.length > 0 && (
+        <div className="border-t border-zinc-800 pt-3">
+          <div className="text-xs text-zinc-500 uppercase tracking-widest mb-2">Rule Violations</div>
+          <ul className="space-y-1">
+            {violations.slice(0, 3).map((v, i) => (
+              <li key={i} className="text-xs text-amber-400 flex items-start gap-1.5">
+                <span>⚠</span><span>{v}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="text-xs text-zinc-600">Last synced: {new Date(snapshot.generated_at).toLocaleDateString()}</div>
     </div>
   );
 }
