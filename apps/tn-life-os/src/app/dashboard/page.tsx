@@ -39,15 +39,50 @@ function WealthWidget({ snapshot }: { snapshot: ReturnType<typeof useSnapshotSto
   if (!snapshot) return <p className="text-zinc-600 text-sm">Not connected — import Wealth OS snapshot.</p>;
   const s = snapshot.summary as Record<string, unknown>;
   const stale = isStale(snapshot);
+  const netWorth = Number(s["total_net_worth"]) || 0;
+  const cash = Number(s["cash_balance"]) || 0;
+  const realEstate = Number(s["total_real_estate_value"]) || 0;
+  const liabilities = Number(s["total_liabilities"]) || 0;
+  const efMonths = Number(s["emergency_fund_months"]) || 0;
+  const efTarget = Number(s["emergency_fund_target_months"]) || 6;
+  const monthlyDebt = Number(s["monthly_debt_payments"]) || 0;
+  const monthlyFamily = Number(s["monthly_family_support"]) || 0;
+  const debtToAsset = Number(s["total_assets"]) > 0 ? (liabilities / Number(s["total_assets"])) * 100 : 0;
+
   return (
-    <div className="space-y-3">
-      {stale && <Badge variant="warning">Snapshot is stale</Badge>}
+    <div className="space-y-4">
+      {stale && <Badge variant="warning">Snapshot is stale (&gt;7 days old)</Badge>}
+
       <div className="grid grid-cols-2 gap-3">
-        <StatWidget label="Net Worth" value={formatCurrency(Number(s["total_net_worth"]) || 0)} trend="up" />
-        <StatWidget label="Cash" value={formatCurrency(Number(s["cash_balance"]) || 0)} trend="neutral" />
-        <StatWidget label="Emergency" value={`${Number(s["emergency_fund_months"] || 0).toFixed(1)} mo`} trend="neutral" />
-        <StatWidget label="Liabilities" value={formatCurrency(Number(s["total_liabilities"]) || 0)} trend="down" />
+        <StatWidget label="Net Worth" value={formatCurrency(netWorth)} trend={netWorth >= 0 ? "up" : "down"} />
+        <StatWidget label="Cash & Bank" value={formatCurrency(cash)} trend="neutral" />
+        <StatWidget label="Real Estate" value={formatCurrency(realEstate)} trend="up" />
+        <StatWidget label="Total Debt" value={formatCurrency(liabilities)} trend="down" />
       </div>
+
+      <div className="grid grid-cols-3 gap-2 text-xs border-t border-zinc-800 pt-3">
+        <div>
+          <div className="text-zinc-500 uppercase tracking-widest mb-1">Emergency</div>
+          <span className={`font-semibold text-sm ${efMonths >= efTarget ? "text-emerald-400" : "text-amber-400"}`}>
+            {efMonths.toFixed(1)} mo
+          </span>
+          <span className="text-zinc-600 ml-1">/ {efTarget}</span>
+        </div>
+        <div>
+          <div className="text-zinc-500 uppercase tracking-widest mb-1">D/A Ratio</div>
+          <span className={`font-semibold text-sm ${debtToAsset > 50 ? "text-red-400" : "text-zinc-300"}`}>
+            {debtToAsset.toFixed(1)}%
+          </span>
+        </div>
+        <div>
+          <div className="text-zinc-500 uppercase tracking-widest mb-1">Monthly Out</div>
+          <span className="font-semibold text-sm text-amber-400">
+            {formatCurrency(monthlyDebt + monthlyFamily)}
+          </span>
+        </div>
+      </div>
+
+      <div className="text-xs text-zinc-600">Last synced: {new Date(snapshot.generated_at).toLocaleDateString()}</div>
     </div>
   );
 }

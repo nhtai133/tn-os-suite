@@ -24,6 +24,89 @@ function extractScalarEntries(summary: Record<string, unknown>): Array<{ key: st
     .map(([key, value]) => ({ key, value }));
 }
 
+function fmtM(n: number): string {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(0)}M`;
+  return n.toLocaleString();
+}
+
+function WealthReviewSection({ snap }: { snap: TNOSSnapshot }) {
+  const s = snap.summary as Record<string, unknown>;
+  const stale = isStale(snap);
+  const netWorth = Number(s["total_net_worth"]) || 0;
+  const totalAssets = Number(s["total_assets"]) || 0;
+  const totalLiabilities = Number(s["total_liabilities"]) || 0;
+  const cash = Number(s["cash_balance"]) || 0;
+  const realEstate = Number(s["total_real_estate_value"]) || 0;
+  const efMonths = Number(s["emergency_fund_months"]) || 0;
+  const efTarget = Number(s["emergency_fund_target_months"]) || 6;
+  const monthlyDebt = Number(s["monthly_debt_payments"]) || 0;
+  const monthlyFamily = Number(s["monthly_family_support"]) || 0;
+  const upcomingMaturities: string[] = Array.isArray(s["upcoming_maturities"]) ? (s["upcoming_maturities"] as string[]) : [];
+
+  return (
+    <Card
+      title="Wealth OS"
+      action={
+        <div className="flex items-center gap-2">
+          <Badge variant={stale ? "warning" : "success"}>{stale ? "Stale" : "Current"}</Badge>
+          <span className="text-xs text-zinc-600">{new Date(snap.generated_at).toLocaleDateString()}</span>
+        </div>
+      }
+    >
+      <div className="mt-3 space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <div className="text-xs text-zinc-500 uppercase tracking-wider">Net Worth</div>
+            <div className={`text-lg font-bold mt-0.5 ${netWorth >= 0 ? "text-emerald-400" : "text-red-400"}`}>{fmtM(netWorth)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-zinc-500 uppercase tracking-wider">Total Assets</div>
+            <div className="text-lg font-bold mt-0.5 text-zinc-200">{fmtM(totalAssets)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-zinc-500 uppercase tracking-wider">Total Debt</div>
+            <div className="text-lg font-bold mt-0.5 text-red-400">{fmtM(totalLiabilities)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-zinc-500 uppercase tracking-wider">Emergency Fund</div>
+            <div className={`text-lg font-bold mt-0.5 ${efMonths >= efTarget ? "text-emerald-400" : "text-amber-400"}`}>{efMonths.toFixed(1)} mo</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm border-t border-zinc-800 pt-3">
+          {[
+            ["Cash & Bank", fmtM(cash)],
+            ["Real Estate", fmtM(realEstate)],
+            ["Monthly Debt Pmts", fmtM(monthlyDebt)],
+            ["Monthly Family", fmtM(monthlyFamily)],
+            ["Total Monthly Out", fmtM(monthlyDebt + monthlyFamily)],
+            ["D/A Ratio", totalAssets > 0 ? `${((totalLiabilities / totalAssets) * 100).toFixed(1)}%` : "—"],
+          ].map(([label, value]) => (
+            <div key={String(label)}>
+              <div className="text-xs text-zinc-500">{label}</div>
+              <div className="text-zinc-200 font-medium mt-0.5">{value}</div>
+            </div>
+          ))}
+        </div>
+
+        {upcomingMaturities.length > 0 && (
+          <div className="border-t border-zinc-800 pt-3">
+            <div className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Upcoming Maturities</div>
+            <ul className="space-y-1">
+              {upcomingMaturities.map((m, i) => (
+                <li key={i} className="text-xs text-emerald-400 flex items-start gap-2">
+                  <span>◆</span><span>{m}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 function TradingReviewSection({ snap }: { snap: TNOSSnapshot }) {
   const s = snap.summary as Record<string, unknown>;
   const stale = isStale(snap);
@@ -136,6 +219,10 @@ export default function WeeklyReviewPage() {
 
         if (osType === "trading_os") {
           return <TradingReviewSection key={osType} snap={snap} />;
+        }
+
+        if (osType === "wealth_os") {
+          return <WealthReviewSection key={osType} snap={snap} />;
         }
 
         const stale = isStale(snap);
