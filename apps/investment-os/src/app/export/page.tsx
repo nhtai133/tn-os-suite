@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useInvestmentStore } from "@/store/useInvestmentStore";
 import { buildSnapshot, downloadSnapshot, snapshotToJSON } from "@tn-os/sync";
 import { Card, Button, Badge } from "@tn-os/ui";
+import { InvestmentOSEntitiesSchema, InvestmentOSSummarySchema, type InvestmentOSSummary } from "@tn-os/schemas";
 
 export default function ExportPage() {
   const store = useInvestmentStore();
@@ -18,28 +19,35 @@ export default function ExportPage() {
     const highConviction = store.funds.filter((f) => f.conviction === "high");
     const convictionScore = highConviction.length > store.funds.length / 2 ? "high" : store.funds.length > 0 ? "medium" : "low";
 
+    const summary: InvestmentOSSummary = {
+      total_invested_capital: totalCost,
+      total_current_value: totalValue,
+      total_gain_loss: totalValue - totalCost,
+      total_gain_loss_pct: totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0,
+      cash_waiting_deployment: cashFund?.current_value ?? 0,
+      num_funds: store.funds.length,
+      dca_monthly_amount: dcaTotal,
+      conviction_score: convictionScore,
+      next_buy_zones: store.funds.filter((f) => f.next_buy_zone).map((f) => `${f.name}: ${f.next_buy_zone}`),
+      fund_review_notes: `${store.funds.length} funds tracked. ${store.watchlist.length} items on watchlist.`,
+      currency: "VND",
+    };
+
+    const entities = {
+      funds: store.funds,
+      buy_plans: store.buy_plans,
+      watchlist: store.watchlist,
+      rebalancing_logs: store.rebalancing_logs,
+    };
+
+    InvestmentOSSummarySchema.parse(summary);
+    InvestmentOSEntitiesSchema.parse(entities);
+
     return buildSnapshot({
       osType: "investment_os",
       owner: "nhtai133",
-      summary: {
-        total_invested_capital: totalCost,
-        total_current_value: totalValue,
-        total_gain_loss: totalValue - totalCost,
-        total_gain_loss_pct: totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0,
-        cash_waiting_deployment: cashFund?.current_value ?? 0,
-        num_funds: store.funds.length,
-        dca_monthly_amount: dcaTotal,
-        conviction_score: convictionScore,
-        next_buy_zones: store.funds.filter((f) => f.next_buy_zone).map((f) => `${f.name}: ${f.next_buy_zone}`),
-        fund_review_notes: `${store.funds.length} funds tracked. ${store.watchlist.length} items on watchlist.`,
-        currency: "VND",
-      },
-      entities: {
-        funds: store.funds,
-        buy_plans: store.buy_plans,
-        watchlist: store.watchlist,
-        rebalancing_logs: store.rebalancing_logs,
-      },
+      summary: summary as unknown as Record<string, unknown>,
+      entities,
       metrics: {
         total_gain_loss_pct: totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0,
         allocation_drift_max: Math.max(...store.funds.map((f) => {
@@ -52,7 +60,10 @@ export default function ExportPage() {
           const pct = totalValue > 0 ? (f.current_value / totalValue) * 100 : 0;
           return Math.abs(pct - f.target_allocation_pct) > 5;
         })
-        .map((f) => `${f.name} is ${((f.current_value / totalValue) * 100 - f.target_allocation_pct).toFixed(1)}% off target allocation`),
+        .map((f) => {
+          const pct = totalValue > 0 ? (f.current_value / totalValue) * 100 : 0;
+          return `${f.name} is ${(pct - f.target_allocation_pct).toFixed(1)}% off target allocation`;
+        }),
       aiContext: {
         portfolio_summary: `${store.funds.length} funds, total value ${totalValue.toLocaleString()} VND, ${convictionScore} conviction`,
         watchlist_summary: store.watchlist.map((w) => w.name).join(", "),

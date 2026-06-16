@@ -23,7 +23,14 @@ function loadData(): InvestmentData {
   if (typeof window === "undefined") return DEFAULT_DATA;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as InvestmentData) : DEFAULT_DATA;
+    if (!raw) return DEFAULT_DATA;
+    const parsed = JSON.parse(raw) as Partial<InvestmentData>;
+    return {
+      funds: Array.isArray(parsed.funds) ? parsed.funds : [],
+      buy_plans: Array.isArray(parsed.buy_plans) ? parsed.buy_plans : [],
+      watchlist: Array.isArray(parsed.watchlist) ? parsed.watchlist : [],
+      rebalancing_logs: Array.isArray(parsed.rebalancing_logs) ? parsed.rebalancing_logs : [],
+    };
   } catch {
     return DEFAULT_DATA;
   }
