@@ -238,6 +238,8 @@ export function useWealthStore() {
   }, [update]);
 
   const seedSampleData = useCallback(() => {
+    const hasExistingData = data.bank_accounts.length > 0 || data.real_estate.length > 0 || data.vehicles.length > 0 || data.liabilities.length > 0 || data.net_worth_snapshots.length > 0;
+    if (hasExistingData && !confirm("Load sample Wealth OS data? This replaces current local data.")) return;
     const now = new Date().toISOString();
     const sample: WealthData = {
       bank_accounts: [
@@ -276,7 +278,7 @@ export function useWealthStore() {
     };
     persist(sample);
     setData(sample);
-  }, []);
+  }, [data]);
 
   const clearAllData = useCallback(() => {
     persist(DEFAULT_DATA);

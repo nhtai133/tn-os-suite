@@ -74,6 +74,8 @@ export function useInvestmentStore() {
   }, [updateData]);
 
   const seedSampleData = useCallback(() => {
+    const hasExistingData = data.funds.length > 0 || data.watchlist.length > 0 || data.buy_plans.length > 0 || data.rebalancing_logs.length > 0;
+    if (hasExistingData && !confirm("Load sample Investment OS data? This replaces current local data.")) return;
     const now = new Date().toISOString();
     const sampleData: InvestmentData = {
       funds: [
@@ -148,7 +150,7 @@ export function useInvestmentStore() {
     };
     setData(sampleData);
     saveData(sampleData);
-  }, []);
+  }, [data]);
 
   return {
     ...data,

@@ -330,6 +330,8 @@ export function useBusinessStore() {
   }, [update]);
 
   const seedSampleData = useCallback(() => {
+    const hasExistingData = data.revenue_streams.length > 0 || data.clients.length > 0 || data.expenses.length > 0 || data.tasks.length > 0 || data.monthly_pnl.length > 0;
+    if (hasExistingData && !confirm("Load sample Business OS data? This replaces current local data.")) return;
     const now = new Date().toISOString();
     const sample: BusinessData = {
       revenue_streams: [
@@ -407,7 +409,7 @@ export function useBusinessStore() {
     };
     persist(sample);
     setData(sample);
-  }, []);
+  }, [data]);
 
   const clearAllData = useCallback(() => {
     persist(DEFAULT_DATA);

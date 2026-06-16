@@ -268,6 +268,8 @@ export function useStocksStore() {
   }, [update]);
 
   const seedSampleData = useCallback(() => {
+    const hasExistingData = data.holdings.length > 0 || data.watchlist.length > 0 || data.dividends.length > 0 || data.targets.length > 0 || data.theses.length > 0;
+    if (hasExistingData && !confirm("Load sample Stocks OS data? This replaces current local data.")) return;
     const now = new Date().toISOString();
     const sample: StocksData = {
       cash_available_usd: 500,
@@ -319,7 +321,7 @@ export function useStocksStore() {
     };
     persist(sample);
     setData(sample);
-  }, []);
+  }, [data]);
 
   const clearAllData = useCallback(() => {
     persist(DEFAULT_DATA);

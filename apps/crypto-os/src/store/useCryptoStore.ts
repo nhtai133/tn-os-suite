@@ -269,6 +269,8 @@ export function useCryptoStore() {
   }, [update]);
 
   const seedSampleData = useCallback(() => {
+    const hasExistingData = data.holdings.length > 0 || data.wallets.length > 0 || data.exchanges.length > 0 || data.transactions.length > 0 || data.theses.length > 0;
+    if (hasExistingData && !confirm("Load sample Crypto OS data? This replaces current local data.")) return;
     const now = new Date().toISOString();
     const sample: CryptoData = {
       target_btc_amount: 1.0,
@@ -326,7 +328,7 @@ export function useCryptoStore() {
     };
     persist(sample);
     setData(sample);
-  }, []);
+  }, [data]);
 
   const clearAllData = useCallback(() => {
     persist(DEFAULT_DATA);
