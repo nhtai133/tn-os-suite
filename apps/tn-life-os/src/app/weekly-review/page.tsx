@@ -193,6 +193,122 @@ function TradingReviewSection({ snap }: { snap: TNOSSnapshot }) {
   );
 }
 
+function BusinessReviewSection({ snap }: { snap: TNOSSnapshot }) {
+  const s = snap.summary as Record<string, unknown>;
+  const stale = isStale(snap);
+  const monthlyRevenue = Number(s["monthly_revenue"]) || 0;
+  const monthlyExpenses = Number(s["monthly_expenses"]) || 0;
+  const netProfit = Number(s["net_profit"]) || 0;
+  const marginPct = Number(s["net_profit_margin_pct"]) || 0;
+  const activeClients = Number(s["active_clients"]) || 0;
+  const activeLeads = Number(s["active_leads"]) || 0;
+  const pendingIssues = Number(s["pending_client_issues"]) || 0;
+  const contentCount = Number(s["content_output_count"]) || 0;
+  const activeCampaigns = Number(s["active_campaigns"]) || 0;
+  const openTasks = Number(s["open_tasks"]) || 0;
+  const highPriorityTasks = Number(s["high_priority_tasks"]) || 0;
+  const businessRisk = String(s["business_risk"] ?? "low");
+  const riskVariant: "success" | "warning" | "danger" =
+    businessRisk === "low" ? "success" : businessRisk === "medium" ? "warning" : "danger";
+  const riskNotes: string[] = Array.isArray(s["business_risk_notes"]) ? (s["business_risk_notes"] as string[]) : [];
+  const nextGrowthActions: string[] = Array.isArray(s["next_growth_actions"]) ? (s["next_growth_actions"] as string[]) : [];
+  const revenueByChannel = s["revenue_by_channel"] as Record<string, number> | undefined;
+  const topChannels = revenueByChannel
+    ? Object.entries(revenueByChannel).sort((a, z) => z[1] - a[1]).slice(0, 4)
+    : [];
+
+  return (
+    <Card
+      title="Business OS"
+      action={
+        <div className="flex items-center gap-2">
+          <Badge variant={stale ? "warning" : "success"}>{stale ? "Stale" : "Current"}</Badge>
+          <span className="text-xs text-zinc-600">{new Date(snap.generated_at).toLocaleDateString()}</span>
+        </div>
+      }
+    >
+      <div className="mt-3 space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <div className="text-xs text-zinc-500 uppercase tracking-wider">Monthly Revenue</div>
+            <div className="text-lg font-bold mt-0.5 text-violet-400">${monthlyRevenue.toFixed(0)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-zinc-500 uppercase tracking-wider">Net Profit</div>
+            <div className={`text-lg font-bold mt-0.5 ${netProfit >= 0 ? "text-emerald-400" : "text-red-400"}`}>${netProfit.toFixed(0)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-zinc-500 uppercase tracking-wider">Profit Margin</div>
+            <div className={`text-lg font-bold mt-0.5 ${marginPct >= 30 ? "text-emerald-400" : "text-amber-400"}`}>{marginPct.toFixed(0)}%</div>
+          </div>
+          <div>
+            <div className="text-xs text-zinc-500 uppercase tracking-wider">Business Risk</div>
+            <div className="mt-1"><Badge variant={riskVariant}>{businessRisk}</Badge></div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm border-t border-zinc-800 pt-3">
+          {[
+            ["Monthly Expenses", `$${monthlyExpenses.toFixed(0)}`],
+            ["Active Clients", String(activeClients)],
+            ["Active Leads", String(activeLeads)],
+            ["Pending Issues", String(pendingIssues)],
+            ["Content Published", `${contentCount} this mo`],
+            ["Active Campaigns", String(activeCampaigns)],
+            ["Open Tasks", String(openTasks)],
+            ["High Priority", String(highPriorityTasks)],
+          ].map(([label, value]) => (
+            <div key={String(label)}>
+              <div className="text-xs text-zinc-500">{label}</div>
+              <div className={`font-medium mt-0.5 ${label === "Pending Issues" && pendingIssues > 0 ? "text-red-400" : label === "High Priority" && highPriorityTasks > 0 ? "text-amber-400" : "text-zinc-200"}`}>{value}</div>
+            </div>
+          ))}
+        </div>
+
+        {topChannels.length > 0 && (
+          <div className="border-t border-zinc-800 pt-3">
+            <div className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Revenue by Channel</div>
+            <div className="grid grid-cols-2 gap-2">
+              {topChannels.map(([ch, val]) => (
+                <div key={ch} className="flex justify-between text-sm">
+                  <span className="text-zinc-400 capitalize">{ch.replace(/-/g, " ")}</span>
+                  <span className="text-violet-400 font-medium">${val.toFixed(0)}/mo</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {riskNotes.length > 0 && (
+          <div className="border-t border-zinc-800 pt-3">
+            <div className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Risk Flags</div>
+            <ul className="space-y-1">
+              {riskNotes.map((note, i) => (
+                <li key={i} className="text-xs text-amber-400 flex items-start gap-2">
+                  <span>⚠</span><span>{note}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {nextGrowthActions.length > 0 && (
+          <div className="border-t border-zinc-800 pt-3">
+            <div className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Next Growth Actions</div>
+            <ul className="space-y-1">
+              {nextGrowthActions.map((action, i) => (
+                <li key={i} className="text-xs text-violet-400 flex items-start gap-2">
+                  <span>→</span><span>{action}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 export default function WeeklyReviewPage() {
   const { snapshots, hydrated } = useSnapshotStore();
 
@@ -223,6 +339,10 @@ export default function WeeklyReviewPage() {
 
         if (osType === "wealth_os") {
           return <WealthReviewSection key={osType} snap={snap} />;
+        }
+
+        if (osType === "business_os") {
+          return <BusinessReviewSection key={osType} snap={snap} />;
         }
 
         const stale = isStale(snap);

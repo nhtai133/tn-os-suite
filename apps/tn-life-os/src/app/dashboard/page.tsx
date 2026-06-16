@@ -156,6 +156,80 @@ function TradingWidget({ snapshot }: { snapshot: ReturnType<typeof useSnapshotSt
   );
 }
 
+function BusinessWidget({ snapshot }: { snapshot: ReturnType<typeof useSnapshotStore>["snapshots"][OSType] }) {
+  if (!snapshot) return <p className="text-zinc-600 text-sm">Not connected — import Business OS snapshot.</p>;
+  const s = snapshot.summary as Record<string, unknown>;
+  const stale = isStale(snapshot);
+  const monthlyRevenue = Number(s["monthly_revenue"]) || 0;
+  const netProfit = Number(s["net_profit"]) || 0;
+  const marginPct = Number(s["net_profit_margin_pct"]) || 0;
+  const activeClients = Number(s["active_clients"]) || 0;
+  const contentCount = Number(s["content_output_count"]) || 0;
+  const businessRisk = String(s["business_risk"] ?? "low");
+  const riskVariant: "success" | "warning" | "danger" =
+    businessRisk === "low" ? "success" : businessRisk === "medium" ? "warning" : "danger";
+  const revenueByChannel = s["revenue_by_channel"] as Record<string, number> | undefined;
+  const topChannels = revenueByChannel
+    ? Object.entries(revenueByChannel).sort((a, z) => z[1] - a[1]).slice(0, 3)
+    : [];
+  const nextActions: string[] = Array.isArray(s["next_growth_actions"]) ? (s["next_growth_actions"] as string[]) : [];
+
+  return (
+    <div className="space-y-4">
+      {stale && <Badge variant="warning">Snapshot is stale (&gt;7 days old)</Badge>}
+
+      <div className="grid grid-cols-2 gap-3">
+        <StatWidget label="Monthly Revenue" value={`$${monthlyRevenue.toFixed(0)}`} trend="up" />
+        <StatWidget label="Net Profit" value={`$${netProfit.toFixed(0)}`} trend={netProfit >= 0 ? "up" : "down"} />
+        <StatWidget label="Profit Margin" value={`${marginPct.toFixed(0)}%`} trend={marginPct >= 30 ? "up" : "neutral"} />
+        <StatWidget label="Active Clients" value={String(activeClients)} trend="neutral" />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-xs border-t border-zinc-800 pt-3">
+        <div>
+          <div className="text-zinc-500 uppercase tracking-widest mb-1">Content</div>
+          <span className="font-semibold text-sm text-violet-400">{contentCount} this mo</span>
+        </div>
+        <div>
+          <div className="text-zinc-500 uppercase tracking-widest mb-1">Risk</div>
+          <Badge variant={riskVariant}>{businessRisk}</Badge>
+        </div>
+        <div>
+          <div className="text-zinc-500 uppercase tracking-widest mb-1">Open Tasks</div>
+          <span className="font-semibold text-sm text-zinc-300">{Number(s["open_tasks"]) || 0}</span>
+        </div>
+      </div>
+
+      {topChannels.length > 0 && (
+        <div className="border-t border-zinc-800 pt-3 space-y-1">
+          <div className="text-xs text-zinc-500 uppercase tracking-widest mb-2">Top Revenue Channels</div>
+          {topChannels.map(([ch, val]) => (
+            <div key={ch} className="flex justify-between text-xs">
+              <span className="text-zinc-400 capitalize">{ch.replace(/-/g, " ")}</span>
+              <span className="text-violet-400 font-medium">${val.toFixed(0)}/mo</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {nextActions.length > 0 && (
+        <div className="border-t border-zinc-800 pt-3">
+          <div className="text-xs text-zinc-500 uppercase tracking-widest mb-2">Next Actions</div>
+          <ul className="space-y-1">
+            {nextActions.slice(0, 2).map((a, i) => (
+              <li key={i} className="text-xs text-zinc-400 flex items-start gap-1.5">
+                <span className="text-violet-500">→</span><span>{a}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="text-xs text-zinc-600">Last synced: {new Date(snapshot.generated_at).toLocaleDateString()}</div>
+    </div>
+  );
+}
+
 function GenericWidget({ snapshot, osType }: { snapshot: ReturnType<typeof useSnapshotStore>["snapshots"][OSType]; osType: OSType }) {
   if (!snapshot) return <p className="text-zinc-600 text-sm">Not connected — import {OS_LABELS[osType]} snapshot.</p>;
   const keys = Object.entries(snapshot.summary as Record<string, unknown>).slice(0, 4);
@@ -222,7 +296,11 @@ export default function DashboardPage() {
           <TradingWidget snapshot={snapshots["trading_os"]} />
         </Card>
 
-        {(["crypto_os", "stocks_os", "business_os"] as OSType[]).map((osType) => (
+        <Card title="Business OS" action={snapshots["business_os"] ? <Badge variant="success">Live</Badge> : <Badge variant="neutral">Offline</Badge>}>
+          <BusinessWidget snapshot={snapshots["business_os"]} />
+        </Card>
+
+        {(["crypto_os", "stocks_os"] as OSType[]).map((osType) => (
           <Card key={osType} title={OS_LABELS[osType]} action={snapshots[osType] ? <Badge variant="success">Live</Badge> : <Badge variant="neutral">Offline</Badge>}>
             <GenericWidget snapshot={snapshots[osType]} osType={osType} />
           </Card>
