@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Link from "next/link";
 import { useSnapshotStore, CHILD_OS_TYPES, OS_LABELS } from "@/store/useSnapshotStore";
 import { importSnapshotFromFile, isStale } from "@tn-os/sync";
 import { Card, Badge, Button } from "@tn-os/ui";
@@ -43,6 +44,15 @@ export default function ImportPage() {
         <h1 className="text-2xl font-bold text-white">Import Snapshots</h1>
         <p className="text-sm text-zinc-500 mt-0.5">Import <code className="text-blue-400">.tnos.json</code> exports from child OS apps</p>
       </div>
+
+      <Card title="Batch Import">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-zinc-500">Import multiple child OS snapshots at once and replace older snapshots by OS type.</p>
+          <Link href="/import/batch" className="shrink-0 rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-sm font-medium text-blue-400 transition-colors hover:bg-blue-500/20">
+            Open Batch Import
+          </Link>
+        </div>
+      </Card>
 
       {/* Drop zone */}
       <div
