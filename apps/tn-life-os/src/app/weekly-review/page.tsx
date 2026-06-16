@@ -56,7 +56,7 @@ function WealthReviewSection({ snap }: { snap: TNOSSnapshot }) {
       }
     >
       <div className="mt-3 space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <div className="text-xs text-zinc-500 uppercase tracking-wider">Net Worth</div>
             <div className={`text-lg font-bold mt-0.5 ${netWorth >= 0 ? "text-emerald-400" : "text-red-400"}`}>{fmtM(netWorth)}</div>
@@ -75,7 +75,7 @@ function WealthReviewSection({ snap }: { snap: TNOSSnapshot }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm border-t border-zinc-800 pt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm border-t border-zinc-800 pt-3">
           {[
             ["Cash & Bank", fmtM(cash)],
             ["Real Estate", fmtM(realEstate)],
@@ -129,7 +129,7 @@ function TradingReviewSection({ snap }: { snap: TNOSSnapshot }) {
       }
     >
       <div className="mt-3 space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <div className="text-xs text-zinc-500 uppercase tracking-wider">Weekly PnL</div>
             <div className={`text-lg font-bold mt-0.5 ${weeklyPnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>
@@ -154,7 +154,7 @@ function TradingReviewSection({ snap }: { snap: TNOSSnapshot }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm border-t border-zinc-800 pt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm border-t border-zinc-800 pt-3">
           {[
             ["Total Equity", `$${(Number(s["total_equity"]) || 0).toLocaleString()}`],
             ["Daily DD Used", `${(Number(s["daily_loss_usage_pct"]) || 0).toFixed(1)}%`],
@@ -229,7 +229,7 @@ function BusinessReviewSection({ snap }: { snap: TNOSSnapshot }) {
       }
     >
       <div className="mt-3 space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <div className="text-xs text-zinc-500 uppercase tracking-wider">Monthly Revenue</div>
             <div className="text-lg font-bold mt-0.5 text-violet-400">${monthlyRevenue.toFixed(0)}</div>
@@ -248,7 +248,7 @@ function BusinessReviewSection({ snap }: { snap: TNOSSnapshot }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm border-t border-zinc-800 pt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm border-t border-zinc-800 pt-3">
           {[
             ["Monthly Expenses", `$${monthlyExpenses.toFixed(0)}`],
             ["Active Clients", String(activeClients)],
@@ -269,7 +269,7 @@ function BusinessReviewSection({ snap }: { snap: TNOSSnapshot }) {
         {topChannels.length > 0 && (
           <div className="border-t border-zinc-800 pt-3">
             <div className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Revenue by Channel</div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {topChannels.map(([ch, val]) => (
                 <div key={ch} className="flex justify-between text-sm">
                   <span className="text-zinc-400 capitalize">{ch.replace(/-/g, " ")}</span>
@@ -314,7 +314,7 @@ export default function WeeklyReviewPage() {
   const { snapshots, hydrated } = useSnapshotStore();
   const decisionStore = useDecisionStore();
 
-  if (!hydrated || !decisionStore.hydrated) return <div className="p-8 text-zinc-600 animate-pulse">Loading...</div>;
+  if (!hydrated || !decisionStore.hydrated) return <div className="p-4 md:p-8 text-zinc-600 animate-pulse">Loading...</div>;
 
   const now = new Date();
   const weekStart = new Date(now);
@@ -330,7 +330,7 @@ export default function WeeklyReviewPage() {
   ));
 
   return (
-    <div className="p-8 space-y-6 max-w-4xl">
+    <div className="p-4 md:p-8 space-y-6 max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold text-white">Weekly Review</h1>
         <p className="text-sm text-zinc-500 mt-0.5">
@@ -389,7 +389,7 @@ export default function WeeklyReviewPage() {
             }
           >
             <div className="mt-2 space-y-3">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2">
                 {scalarEntries.map(({ key, value }) => (
                   <ScalarEntry key={key} label={key.replace(/_/g, " ")} value={value} />
                 ))}

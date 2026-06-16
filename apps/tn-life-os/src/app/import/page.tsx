@@ -36,10 +36,10 @@ export default function ImportPage() {
     e.target.value = "";
   }, [handleFile]);
 
-  if (!hydrated) return <div className="p-8 text-zinc-600 animate-pulse">Loading...</div>;
+  if (!hydrated) return <div className="p-4 md:p-8 text-zinc-600 animate-pulse">Loading...</div>;
 
   return (
-    <div className="p-8 space-y-6 max-w-3xl">
+    <div className="p-4 md:p-8 space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-bold text-white">Import Snapshots</h1>
         <p className="text-sm text-zinc-500 mt-0.5">Import <code className="text-blue-400">.tnos.json</code> exports from child OS apps</p>

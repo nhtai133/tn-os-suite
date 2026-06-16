@@ -24,10 +24,10 @@ export default function DecisionsPage() {
   const dueCount = store.decisions.filter((decision) => decision.status !== "archived" && isDue(decision.review_date)).length;
   const reviewedCount = store.decisions.filter((decision) => decision.status === "reviewed").length;
 
-  if (!store.hydrated) return <div className="p-8 text-zinc-600 animate-pulse">Loading...</div>;
+  if (!store.hydrated) return <div className="p-4 md:p-8 text-zinc-600 animate-pulse">Loading...</div>;
 
   return (
-    <div className="p-8 space-y-6 max-w-6xl">
+    <div className="p-4 md:p-8 space-y-6 max-w-6xl">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Decision Registry</h1>

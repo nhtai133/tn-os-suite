@@ -97,10 +97,10 @@ export default function BatchImportPage() {
     if (event.dataTransfer.files.length > 0) void processFiles(event.dataTransfer.files);
   }, [processFiles]);
 
-  if (!hydrated) return <div className="p-8 text-zinc-600 animate-pulse">Loading...</div>;
+  if (!hydrated) return <div className="p-4 md:p-8 text-zinc-600 animate-pulse">Loading...</div>;
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
+    <div className="p-4 md:p-8 space-y-6 max-w-5xl">
       <div className="flex items-center justify-between gap-4">
         <div>
           <Link href="/import" className="text-xs text-zinc-500 hover:text-zinc-300">Back to single import</Link>
@@ -135,7 +135,7 @@ export default function BatchImportPage() {
         </label>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Card title="Imported"><div className="text-2xl font-bold text-emerald-400">{summary.imported}</div></Card>
         <Card title="Replaced"><div className="text-2xl font-bold text-blue-400">{summary.replaced}</div></Card>
         <Card title="Skipped"><div className="text-2xl font-bold text-amber-400">{summary.skipped}</div></Card>

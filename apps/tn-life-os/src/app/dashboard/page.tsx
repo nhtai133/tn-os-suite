@@ -24,7 +24,7 @@ function InvestmentWidget({ snapshot }: { snapshot: ReturnType<typeof useSnapsho
   return (
     <div className="space-y-3">
       {stale && <Badge variant="warning">Snapshot is stale (&gt;7 days old)</Badge>}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <StatWidget label="Total Value" value={formatCurrency(Number(s["total_current_value"]) || 0)} trend="up" />
         <StatWidget label="Gain/Loss %" value={`${(Number(s["total_gain_loss_pct"]) || 0).toFixed(1)}%`} trend={(Number(s["total_gain_loss"]) || 0) >= 0 ? "up" : "down"} />
         <StatWidget label="Funds" value={String(s["num_funds"] ?? "—")} trend="neutral" />
@@ -53,7 +53,7 @@ function WealthWidget({ snapshot }: { snapshot: ReturnType<typeof useSnapshotSto
     <div className="space-y-4">
       {stale && <Badge variant="warning">Snapshot is stale (&gt;7 days old)</Badge>}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <StatWidget label="Net Worth" value={formatCurrency(netWorth)} trend={netWorth >= 0 ? "up" : "down"} />
         <StatWidget label="Cash & Bank" value={formatCurrency(cash)} trend="neutral" />
         <StatWidget label="Real Estate" value={formatCurrency(realEstate)} trend="up" />
@@ -109,7 +109,7 @@ function TradingWidget({ snapshot }: { snapshot: ReturnType<typeof useSnapshotSt
     <div className="space-y-4">
       {stale && <Badge variant="warning">Snapshot is stale (&gt;7 days old)</Badge>}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <StatWidget label="Equity" value={`$${(Number(s["total_equity"]) || 0).toLocaleString()}`} trend="neutral" />
         <StatWidget label="Weekly PnL" value={`$${weeklyPnl.toFixed(0)}`} trend={weeklyPnl >= 0 ? "up" : "down"} />
         <StatWidget label="Monthly PnL" value={`$${monthlyPnl.toFixed(0)}`} trend={monthlyPnl >= 0 ? "up" : "down"} />
@@ -178,7 +178,7 @@ function BusinessWidget({ snapshot }: { snapshot: ReturnType<typeof useSnapshotS
     <div className="space-y-4">
       {stale && <Badge variant="warning">Snapshot is stale (&gt;7 days old)</Badge>}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <StatWidget label="Monthly Revenue" value={`$${monthlyRevenue.toFixed(0)}`} trend="up" />
         <StatWidget label="Net Profit" value={`$${netProfit.toFixed(0)}`} trend={netProfit >= 0 ? "up" : "down"} />
         <StatWidget label="Profit Margin" value={`${marginPct.toFixed(0)}%`} trend={marginPct >= 30 ? "up" : "neutral"} />
@@ -234,7 +234,7 @@ function GenericWidget({ snapshot, osType }: { snapshot: ReturnType<typeof useSn
   if (!snapshot) return <p className="text-zinc-600 text-sm">Not connected — import {OS_LABELS[osType]} snapshot.</p>;
   const keys = Object.entries(snapshot.summary as Record<string, unknown>).slice(0, 4);
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       {keys.map(([k, v]) => (
         <StatWidget key={k} label={k.replace(/_/g, " ")} value={typeof v === "number" ? v.toLocaleString() : String(v)} trend="neutral" />
       ))}
@@ -245,12 +245,12 @@ function GenericWidget({ snapshot, osType }: { snapshot: ReturnType<typeof useSn
 export default function DashboardPage() {
   const { snapshots, hydrated } = useSnapshotStore();
 
-  if (!hydrated) return <div className="p-8 text-zinc-600 animate-pulse">Loading...</div>;
+  if (!hydrated) return <div className="p-4 md:p-8 text-zinc-600 animate-pulse">Loading...</div>;
 
   const connectedCount = CHILD_OS_TYPES.filter((t) => !!snapshots[t]).length;
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl">
+    <div className="p-4 md:p-8 space-y-6 max-w-7xl">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -23,11 +23,11 @@ export default function DecisionDetailPage() {
   const [editing, setEditing] = useState(false);
   const decision = useMemo(() => store.decisions.find((item) => item.id === params.id), [store.decisions, params.id]);
 
-  if (!store.hydrated) return <div className="p-8 text-zinc-600 animate-pulse">Loading...</div>;
+  if (!store.hydrated) return <div className="p-4 md:p-8 text-zinc-600 animate-pulse">Loading...</div>;
 
   if (!decision) {
     return (
-      <div className="p-8 space-y-4">
+      <div className="p-4 md:p-8 space-y-4">
         <Link href="/decisions" className="text-xs text-zinc-500 hover:text-zinc-300">Back to decisions</Link>
         <Card title="Decision not found">
           <p className="text-sm text-zinc-500">This decision may have been deleted or archived in another browser session.</p>
@@ -38,7 +38,7 @@ export default function DecisionDetailPage() {
 
   if (editing) {
     return (
-      <div className="p-8 space-y-6 max-w-5xl">
+      <div className="p-4 md:p-8 space-y-6 max-w-5xl">
         <div>
           <button onClick={() => setEditing(false)} className="text-xs text-zinc-500 hover:text-zinc-300">Back to detail</button>
           <h1 className="text-2xl font-bold text-white mt-2">Edit Decision</h1>
@@ -49,7 +49,7 @@ export default function DecisionDetailPage() {
   }
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
+    <div className="p-4 md:p-8 space-y-6 max-w-5xl">
       <div className="flex items-center justify-between gap-4">
         <div>
           <Link href="/decisions" className="text-xs text-zinc-500 hover:text-zinc-300">Back to decisions</Link>

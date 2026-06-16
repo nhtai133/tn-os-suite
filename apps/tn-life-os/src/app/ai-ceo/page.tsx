@@ -25,7 +25,7 @@ function BriefingSectionCard({ section }: { section: BriefingSection }) {
     <Card title={section.title} action={<Badge variant={toneBadge[section.tone]}>{toneText[section.tone]}</Badge>}>
       <div className="space-y-4">
         <p className="text-sm text-zinc-300 leading-relaxed">{section.summary}</p>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {section.metrics.map((metric) => (
             <StatWidget
               key={`${section.title}-${metric.label}`}
@@ -77,10 +77,10 @@ export default function AiCeoPage() {
     briefing.sections.stocksExposure,
   ];
 
-  if (!hydrated || !decisionStore.hydrated) return <div className="p-8 text-zinc-600 animate-pulse">Loading...</div>;
+  if (!hydrated || !decisionStore.hydrated) return <div className="p-4 md:p-8 text-zinc-600 animate-pulse">Loading...</div>;
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 md:p-8 space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="text-xs text-zinc-600 uppercase tracking-widest mb-1">Template AI Layer</div>
