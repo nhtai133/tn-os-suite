@@ -1,5 +1,5 @@
 import type { OSType, TNOSSnapshot } from "@tn-os/schemas";
-import { validateSnapshot } from "./validate";
+import { validateSnapshot } from "@tn-os/sync";
 
 export type LocalSyncStatus = "synced" | "not_found" | "validation_failed" | "timeout";
 
@@ -10,14 +10,13 @@ export type LocalSyncResult = {
   errors?: string[];
 };
 
-// Default localhost ports for local dev. Override via env vars in the consuming app.
 const CHILD_ORIGINS: Partial<Record<OSType, string>> = {
-  wealth_os:    "http://localhost:3003",
-  investment_os:"http://localhost:3001",
-  trading_os:   "http://localhost:3002",
-  crypto_os:    "http://localhost:3005",
-  stocks_os:    "http://localhost:3006",
-  business_os:  "http://localhost:3004",
+  wealth_os:    process.env.NEXT_PUBLIC_WEALTH_OS_URL    ?? "http://localhost:3003",
+  investment_os:process.env.NEXT_PUBLIC_INVESTMENT_OS_URL ?? "http://localhost:3001",
+  trading_os:   process.env.NEXT_PUBLIC_TRADING_OS_URL   ?? "http://localhost:3002",
+  crypto_os:    process.env.NEXT_PUBLIC_CRYPTO_OS_URL    ?? "http://localhost:3005",
+  stocks_os:    process.env.NEXT_PUBLIC_STOCKS_OS_URL    ?? "http://localhost:3006",
+  business_os:  process.env.NEXT_PUBLIC_BUSINESS_OS_URL  ?? "http://localhost:3004",
 };
 
 const SYNC_TIMEOUT_MS = 8000;

@@ -3,7 +3,8 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useSnapshotStore, CHILD_OS_TYPES, OS_LABELS } from "@/store/useSnapshotStore";
-import { importSnapshotFromFile, isStale, syncAllLocalSnapshots, type LocalSyncResult } from "@tn-os/sync";
+import { importSnapshotFromFile, isStale } from "@tn-os/sync";
+import { syncAllLocalSnapshots, type LocalSyncResult } from "@/lib/local-auto-sync";
 import { Card, Badge, Button } from "@tn-os/ui";
 import type { OSType } from "@tn-os/schemas";
 import { getOSAppUrl } from "@/lib/os-app-links";
