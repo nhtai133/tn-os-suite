@@ -1,87 +1,116 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useInvestmentStore } from "@/store/useInvestmentStore";
 import { buildSnapshot, downloadSnapshot, snapshotToJSON } from "@tn-os/sync";
 import { Card, Button, Badge } from "@tn-os/ui";
 import { InvestmentOSEntitiesSchema, InvestmentOSSummarySchema, type InvestmentOSSummary } from "@tn-os/schemas";
 
+type InvestmentStore = ReturnType<typeof useInvestmentStore>;
+
+function buildInvestmentSnapshot(store: InvestmentStore) {
+  const totalCost = store.funds.reduce((s, f) => s + f.cost_basis, 0);
+  const totalValue = store.funds.reduce((s, f) => s + f.current_value, 0);
+  const cashFund = store.funds.find((f) => f.category === "cash");
+  const dcaTotal = store.buy_plans.reduce((s, p) => s + (p.currency === "VND" ? p.amount : p.amount * 25000), 0);
+
+  const highConviction = store.funds.filter((f) => f.conviction === "high");
+  const convictionScore = highConviction.length > store.funds.length / 2 ? "high" : store.funds.length > 0 ? "medium" : "low";
+
+  const summary: InvestmentOSSummary = {
+    total_invested_capital: totalCost,
+    total_current_value: totalValue,
+    total_gain_loss: totalValue - totalCost,
+    total_gain_loss_pct: totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0,
+    cash_waiting_deployment: cashFund?.current_value ?? 0,
+    num_funds: store.funds.length,
+    dca_monthly_amount: dcaTotal,
+    conviction_score: convictionScore,
+    next_buy_zones: store.funds.filter((f) => f.next_buy_zone).map((f) => `${f.name}: ${f.next_buy_zone}`),
+    fund_review_notes: `${store.funds.length} funds tracked. ${store.watchlist.length} items on watchlist.`,
+    currency: "VND",
+  };
+
+  const entities = {
+    funds: store.funds,
+    buy_plans: store.buy_plans,
+    watchlist: store.watchlist,
+    rebalancing_logs: store.rebalancing_logs,
+  };
+
+  InvestmentOSSummarySchema.parse(summary);
+  InvestmentOSEntitiesSchema.parse(entities);
+
+  return buildSnapshot({
+    osType: "investment_os",
+    owner: "nhtai133",
+    summary: summary as unknown as Record<string, unknown>,
+    entities,
+    metrics: {
+      total_gain_loss_pct: totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0,
+      allocation_drift_max: Math.max(...store.funds.map((f) => {
+        const pct = totalValue > 0 ? (f.current_value / totalValue) * 100 : 0;
+        return Math.abs(pct - f.target_allocation_pct);
+      }), 0),
+    },
+    risks: store.funds
+      .filter((f) => {
+        const pct = totalValue > 0 ? (f.current_value / totalValue) * 100 : 0;
+        return Math.abs(pct - f.target_allocation_pct) > 5;
+      })
+      .map((f) => {
+        const pct = totalValue > 0 ? (f.current_value / totalValue) * 100 : 0;
+        return `${f.name} is ${(pct - f.target_allocation_pct).toFixed(1)}% off target allocation`;
+      }),
+    aiContext: {
+      portfolio_summary: `${store.funds.length} funds, total value ${totalValue.toLocaleString()} VND, ${convictionScore} conviction`,
+      watchlist_summary: store.watchlist.map((w) => w.name).join(", "),
+      next_actions: store.buy_plans.map((p) => {
+        const fund = store.funds.find((f) => f.id === p.fund_id);
+        return `${p.frequency} buy of ${p.amount} ${p.currency} into ${fund?.name ?? p.fund_id} on ${p.next_date}`;
+      }),
+    },
+  });
+}
+
 export default function ExportPage() {
   const store = useInvestmentStore();
+  const storeRef = useRef(store);
+  storeRef.current = store;
   const [preview, setPreview] = useState<string | null>(null);
 
-  function buildInvestmentSnapshot() {
-    const totalCost = store.funds.reduce((s, f) => s + f.cost_basis, 0);
-    const totalValue = store.funds.reduce((s, f) => s + f.current_value, 0);
-    const cashFund = store.funds.find((f) => f.category === "cash");
-    const dcaTotal = store.buy_plans.reduce((s, p) => s + (p.currency === "VND" ? p.amount : p.amount * 25000), 0);
+  useEffect(() => {
+    if (!store.hydrated) return;
+    if (window.parent !== window) window.parent.postMessage({ type: "TNOS_READY" }, "*");
+  }, [store.hydrated]);
 
-    const highConviction = store.funds.filter((f) => f.conviction === "high");
-    const convictionScore = highConviction.length > store.funds.length / 2 ? "high" : store.funds.length > 0 ? "medium" : "low";
-
-    const summary: InvestmentOSSummary = {
-      total_invested_capital: totalCost,
-      total_current_value: totalValue,
-      total_gain_loss: totalValue - totalCost,
-      total_gain_loss_pct: totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0,
-      cash_waiting_deployment: cashFund?.current_value ?? 0,
-      num_funds: store.funds.length,
-      dca_monthly_amount: dcaTotal,
-      conviction_score: convictionScore,
-      next_buy_zones: store.funds.filter((f) => f.next_buy_zone).map((f) => `${f.name}: ${f.next_buy_zone}`),
-      fund_review_notes: `${store.funds.length} funds tracked. ${store.watchlist.length} items on watchlist.`,
-      currency: "VND",
-    };
-
-    const entities = {
-      funds: store.funds,
-      buy_plans: store.buy_plans,
-      watchlist: store.watchlist,
-      rebalancing_logs: store.rebalancing_logs,
-    };
-
-    InvestmentOSSummarySchema.parse(summary);
-    InvestmentOSEntitiesSchema.parse(entities);
-
-    return buildSnapshot({
-      osType: "investment_os",
-      owner: "nhtai133",
-      summary: summary as unknown as Record<string, unknown>,
-      entities,
-      metrics: {
-        total_gain_loss_pct: totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0,
-        allocation_drift_max: Math.max(...store.funds.map((f) => {
-          const pct = totalValue > 0 ? (f.current_value / totalValue) * 100 : 0;
-          return Math.abs(pct - f.target_allocation_pct);
-        }), 0),
-      },
-      risks: store.funds
-        .filter((f) => {
-          const pct = totalValue > 0 ? (f.current_value / totalValue) * 100 : 0;
-          return Math.abs(pct - f.target_allocation_pct) > 5;
-        })
-        .map((f) => {
-          const pct = totalValue > 0 ? (f.current_value / totalValue) * 100 : 0;
-          return `${f.name} is ${(pct - f.target_allocation_pct).toFixed(1)}% off target allocation`;
-        }),
-      aiContext: {
-        portfolio_summary: `${store.funds.length} funds, total value ${totalValue.toLocaleString()} VND, ${convictionScore} conviction`,
-        watchlist_summary: store.watchlist.map((w) => w.name).join(", "),
-        next_actions: store.buy_plans.map((p) => {
-          const fund = store.funds.find((f) => f.id === p.fund_id);
-          return `${p.frequency} buy of ${p.amount} ${p.currency} into ${fund?.name ?? p.fund_id} on ${p.next_date}`;
-        }),
-      },
-    });
-  }
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if ((event.data as { type?: string }).type !== "TNOS_SNAPSHOT_REQUEST") return;
+      try {
+        const snapshot = buildInvestmentSnapshot(storeRef.current);
+        (event.source as Window | null)?.postMessage(
+          { type: "TNOS_SNAPSHOT_RESPONSE", payload: JSON.stringify(snapshot) },
+          event.origin
+        );
+      } catch {
+        (event.source as Window | null)?.postMessage(
+          { type: "TNOS_SNAPSHOT_RESPONSE", payload: null },
+          event.origin
+        );
+      }
+    }
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   function handlePreview() {
-    const snap = buildInvestmentSnapshot();
+    const snap = buildInvestmentSnapshot(store);
     setPreview(snapshotToJSON(snap));
   }
 
   function handleDownload() {
-    const snap = buildInvestmentSnapshot();
+    const snap = buildInvestmentSnapshot(store);
     downloadSnapshot(snap);
   }
 

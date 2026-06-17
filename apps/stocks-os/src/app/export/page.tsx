@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { useStocksStore, toUSD } from "@/store/useStocksStore";
 import { buildSnapshot, downloadSnapshot, snapshotToJSON, validateSnapshot } from "@tn-os/sync";
 import { Badge, Button, Card } from "@tn-os/ui";
@@ -97,8 +97,35 @@ function buildStocksSnapshot(store: ReturnType<typeof useStocksStore>) {
 
 export default function ExportPage() {
   const store = useStocksStore();
+  const storeRef = useRef(store);
+  storeRef.current = store;
   const [status, setStatus] = useState<Status>({ type: "idle" });
   const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!store.hydrated) return;
+    if (window.parent !== window) window.parent.postMessage({ type: "TNOS_READY" }, "*");
+  }, [store.hydrated]);
+
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if ((event.data as { type?: string }).type !== "TNOS_SNAPSHOT_REQUEST") return;
+      try {
+        const snapshot = buildStocksSnapshot(storeRef.current);
+        (event.source as Window | null)?.postMessage(
+          { type: "TNOS_SNAPSHOT_RESPONSE", payload: JSON.stringify(snapshot) },
+          event.origin
+        );
+      } catch {
+        (event.source as Window | null)?.postMessage(
+          { type: "TNOS_SNAPSHOT_RESPONSE", payload: null },
+          event.origin
+        );
+      }
+    }
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   const handlePreview = useCallback(() => {
     try {

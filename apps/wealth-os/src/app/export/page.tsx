@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useWealthStore } from "@/store/useWealthStore";
 import { buildSnapshot, downloadSnapshot, snapshotToJSON } from "@tn-os/sync";
 import { Card, Button, Badge } from "@tn-os/ui";
@@ -70,8 +70,35 @@ type Status = { type: "idle" } | { type: "success" } | { type: "error"; message:
 
 export default function ExportPage() {
   const w = useWealthStore();
+  const wRef = useRef(w);
+  wRef.current = w;
   const [status, setStatus] = useState<Status>({ type: "idle" });
   const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!w.hydrated) return;
+    if (window.parent !== window) window.parent.postMessage({ type: "TNOS_READY" }, "*");
+  }, [w.hydrated]);
+
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if ((event.data as { type?: string }).type !== "TNOS_SNAPSHOT_REQUEST") return;
+      try {
+        const snapshot = buildWealthSnapshot(wRef.current);
+        (event.source as Window | null)?.postMessage(
+          { type: "TNOS_SNAPSHOT_RESPONSE", payload: JSON.stringify(snapshot) },
+          event.origin
+        );
+      } catch {
+        (event.source as Window | null)?.postMessage(
+          { type: "TNOS_SNAPSHOT_RESPONSE", payload: null },
+          event.origin
+        );
+      }
+    }
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   const handlePreview = useCallback(() => {
     try {

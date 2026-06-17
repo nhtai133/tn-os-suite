@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { buildSnapshot, downloadSnapshot, snapshotToJSON } from "@tn-os/sync";
 import { buildRiskMetrics } from "@/app/_lib/risk-metrics";
 import { buildSetupMetrics } from "@/app/_lib/trading-metrics";
@@ -184,6 +184,28 @@ function StatusRow({ label, value, color = "text-slate-300" }: { label: string; 
 export default function ExportPage() {
   const [status, setStatus] = useState<SnapshotStatus>({ type: "idle" });
   const [previewJson, setPreviewJson] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (window.parent !== window) window.parent.postMessage({ type: "TNOS_READY" }, "*");
+
+    function handleMessage(event: MessageEvent) {
+      if ((event.data as { type?: string }).type !== "TNOS_SNAPSHOT_REQUEST") return;
+      try {
+        const snapshot = buildTradingSnapshot();
+        (event.source as Window | null)?.postMessage(
+          { type: "TNOS_SNAPSHOT_RESPONSE", payload: JSON.stringify(snapshot) },
+          event.origin
+        );
+      } catch {
+        (event.source as Window | null)?.postMessage(
+          { type: "TNOS_SNAPSHOT_RESPONSE", payload: null },
+          event.origin
+        );
+      }
+    }
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   const handlePreview = useCallback(() => {
     try {
