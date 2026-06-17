@@ -32,7 +32,7 @@ export function snapshotToJSON(snapshot: TNOSSnapshot): string {
 
 export function snapshotFilename(osType: OSType): string {
   const date = new Date().toISOString().split("T")[0];
-  return `${osType.replace("_", "-")}-export-${date}.tnos.json`;
+  return `${osType.replace(/_/g, "-")}-export-${date}.tnos.json`;
 }
 
 export function downloadSnapshot(snapshot: TNOSSnapshot): void {

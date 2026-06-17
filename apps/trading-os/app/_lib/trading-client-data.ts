@@ -147,10 +147,12 @@ export const fallbackTradeHistory: Trade[] = [
     date: "May 22, 2026",
     session: "New York",
     entry: 39220,
+    exit: 0,
     rr: 0,
-    result: "Open",
+    pnl: 0,
+    result: "Loss",
     floatingPnl: 640,
-  } as unknown as Trade,
+  },
 ];
 
 export const fallbackEquityCurve: EquityPoint[] = [

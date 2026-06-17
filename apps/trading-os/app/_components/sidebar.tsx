@@ -32,7 +32,15 @@ const personalTradingItems: NavItem[] = [
   { href: "/personal-trading/analytics", label: "Analytics", marker: "TX" },
 ];
 
+const globalViewItems: NavItem[] = [
+  { href: "/trading", label: "Trading Dashboard", marker: "TG" },
+  { href: "/trades", label: "All Trades", marker: "AT" },
+  { href: "/analytics", label: "Global Analytics", marker: "GA" },
+  { href: "/risk", label: "Risk Overview", marker: "RO" },
+];
+
 const systemItems: NavItem[] = [
+  { href: "/import-mt5", label: "Import MT5", marker: "IM" },
   { href: "/export", label: "Export Snapshot", marker: "EX" },
   { href: "/settings", label: "Settings", marker: "ST" },
 ];
@@ -95,6 +103,7 @@ export function Sidebar() {
       <div className="flex-1 space-y-6 overflow-y-auto">
         <SidebarSection title="FTMO OS" items={propTradingItems} />
         <SidebarSection title="Personal Trading" items={personalTradingItems} />
+        <SidebarSection title="Global Views" items={globalViewItems} />
         <SidebarSection title="System" items={systemItems} />
       </div>
     </aside>

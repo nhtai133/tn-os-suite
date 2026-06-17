@@ -1,5 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { Sidebar } from "@/app/_components/sidebar";
+import { readStoredMt5Report } from "@/app/_lib/mt5-local-storage";
 
 type AppShellProps = {
   eyebrow: string;
@@ -9,6 +12,9 @@ type AppShellProps = {
 };
 
 export function AppShell({ action, children, eyebrow, title }: AppShellProps) {
+  const report = readStoredMt5Report();
+  const activeBroker = report?.company ?? report?.accountName ?? "No broker linked";
+
   return (
     <div className="min-h-screen bg-[#070a11] text-slate-100">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.14),transparent_32rem)]" />
@@ -30,7 +36,7 @@ export function AppShell({ action, children, eyebrow, title }: AppShellProps) {
                   Active Broker
                 </div>
                 <div className="mt-1 text-sm font-semibold text-slate-100">
-                  IC Markets Raw
+                  {activeBroker}
                 </div>
               </div>
               {action}

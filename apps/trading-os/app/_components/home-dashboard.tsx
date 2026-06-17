@@ -30,7 +30,7 @@ function toNumber(value: unknown): number {
   return 0;
 }
 
-function formatMoney(value: number, currency = "VND") {
+function formatMoney(value: number, currency = "USD") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
