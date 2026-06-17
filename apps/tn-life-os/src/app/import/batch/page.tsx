@@ -6,6 +6,7 @@ import { Badge, Button, Card } from "@tn-os/ui";
 import { importSnapshotFromFile, isStale } from "@tn-os/sync";
 import type { OSType, TNOSSnapshot } from "@tn-os/schemas";
 import { CHILD_OS_TYPES, OS_LABELS, useSnapshotStore } from "@/store/useSnapshotStore";
+import { getOSAppUrl } from "@/lib/os-app-links";
 
 type BatchResult = {
   fileName: string;
@@ -153,7 +154,17 @@ export default function BatchImportPage() {
                   <div className="text-sm text-zinc-200">{OS_LABELS[osType]}</div>
                   <div className="text-xs text-zinc-600">{snapshot ? new Date(snapshot.generated_at).toLocaleString() : "Not imported"}</div>
                 </div>
-                <Badge variant={!snapshot ? "neutral" : stale ? "warning" : "success"}>{!snapshot ? "Offline" : stale ? "Stale" : "Current"}</Badge>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={getOSAppUrl(osType)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    Open App →
+                  </a>
+                  <Badge variant={!snapshot ? "neutral" : stale ? "warning" : "success"}>{!snapshot ? "Offline" : stale ? "Stale" : "Current"}</Badge>
+                </div>
               </div>
             );
           })}

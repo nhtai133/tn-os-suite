@@ -6,6 +6,7 @@ import { useSnapshotStore, CHILD_OS_TYPES, OS_LABELS } from "@/store/useSnapshot
 import { importSnapshotFromFile, isStale } from "@tn-os/sync";
 import { Card, Badge, Button } from "@tn-os/ui";
 import type { OSType } from "@tn-os/schemas";
+import { getOSAppUrl } from "@/lib/os-app-links";
 
 export default function ImportPage() {
   const { snapshots, hydrated, importSnapshot, removeSnapshot } = useSnapshotStore();
@@ -100,6 +101,14 @@ export default function ImportPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <a
+                    href={getOSAppUrl(osType)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    Open App →
+                  </a>
                   {snap && (
                     <>
                       <Badge variant={stale ? "warning" : "success"}>{stale ? "Stale" : "Current"}</Badge>

@@ -5,6 +5,7 @@ import { isStale } from "@tn-os/sync";
 import { Card, StatWidget, Badge, Button } from "@tn-os/ui";
 import Link from "next/link";
 import type { OSType } from "@tn-os/schemas";
+import { getOSAppUrl } from "@/lib/os-app-links";
 
 function formatCurrency(n: number, currency = "VND") {
   if (currency === "USD") return `$${(n / 1000).toFixed(0)}K`;
@@ -242,6 +243,22 @@ function GenericWidget({ snapshot, osType }: { snapshot: ReturnType<typeof useSn
   );
 }
 
+function OSCardAction({ osType, connected }: { osType: OSType; connected: boolean }) {
+  return (
+    <div className="flex items-center gap-2">
+      <a
+        href={getOSAppUrl(osType)}
+        target="_blank"
+        rel="noreferrer"
+        className="text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
+      >
+        Open App →
+      </a>
+      {connected ? <Badge variant="success">Live</Badge> : <Badge variant="neutral">Offline</Badge>}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { snapshots, hydrated } = useSnapshotStore();
 
@@ -273,35 +290,41 @@ export default function DashboardPage() {
           const connected = !!snapshots[osType];
           const stale = connected && isStale(snapshots[osType]!);
           return (
-            <div key={osType} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs ${connected ? stale ? "border-amber-500/30 bg-amber-500/5 text-amber-400" : "border-emerald-500/30 bg-emerald-500/5 text-emerald-400" : "border-zinc-800 bg-zinc-900 text-zinc-600"}`}>
+            <a
+              key={osType}
+              href={getOSAppUrl(osType)}
+              target="_blank"
+              rel="noreferrer"
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs transition-opacity hover:opacity-80 ${connected ? stale ? "border-amber-500/30 bg-amber-500/5 text-amber-400" : "border-emerald-500/30 bg-emerald-500/5 text-emerald-400" : "border-zinc-800 bg-zinc-900 text-zinc-600"}`}
+            >
               <OSStatusDot connected={connected} />
               {OS_LABELS[osType]}
               {stale && " · stale"}
-            </div>
+            </a>
           );
         })}
       </div>
 
       {/* Main widgets grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        <Card title="Investment OS" action={snapshots["investment_os"] ? <Badge variant="success">Live</Badge> : <Badge variant="neutral">Offline</Badge>}>
+        <Card title="Investment OS" action={<OSCardAction osType="investment_os" connected={!!snapshots["investment_os"]} />}>
           <InvestmentWidget snapshot={snapshots["investment_os"]} />
         </Card>
 
-        <Card title="Wealth OS" action={snapshots["wealth_os"] ? <Badge variant="success">Live</Badge> : <Badge variant="neutral">Offline</Badge>}>
+        <Card title="Wealth OS" action={<OSCardAction osType="wealth_os" connected={!!snapshots["wealth_os"]} />}>
           <WealthWidget snapshot={snapshots["wealth_os"]} />
         </Card>
 
-        <Card title="Trading OS" action={snapshots["trading_os"] ? <Badge variant="success">Live</Badge> : <Badge variant="neutral">Offline</Badge>}>
+        <Card title="Trading OS" action={<OSCardAction osType="trading_os" connected={!!snapshots["trading_os"]} />}>
           <TradingWidget snapshot={snapshots["trading_os"]} />
         </Card>
 
-        <Card title="Business OS" action={snapshots["business_os"] ? <Badge variant="success">Live</Badge> : <Badge variant="neutral">Offline</Badge>}>
+        <Card title="Business OS" action={<OSCardAction osType="business_os" connected={!!snapshots["business_os"]} />}>
           <BusinessWidget snapshot={snapshots["business_os"]} />
         </Card>
 
         {(["crypto_os", "stocks_os"] as OSType[]).map((osType) => (
-          <Card key={osType} title={OS_LABELS[osType]} action={snapshots[osType] ? <Badge variant="success">Live</Badge> : <Badge variant="neutral">Offline</Badge>}>
+          <Card key={osType} title={OS_LABELS[osType]} action={<OSCardAction osType={osType} connected={!!snapshots[osType]} />}>
             <GenericWidget snapshot={snapshots[osType]} osType={osType} />
           </Card>
         ))}
