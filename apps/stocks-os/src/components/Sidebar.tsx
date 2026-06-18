@@ -9,6 +9,8 @@ const NAV = [
     items: [
       { href: "/dashboard", label: "Dashboard" },
       { href: "/reports",   label: "Reports" },
+      { href: "/income",    label: "Income" },
+      { href: "/dividends", label: "Dividends" },
     ],
   },
   {
@@ -37,10 +39,6 @@ const NAV = [
       { href: "/buy-zones", label: "Buy Zones" },
       { href: "/sell-rules", label: "Sell Rules" },
     ],
-  },
-  {
-    section: "Income",
-    items: [{ href: "/dividends", label: "Dividends" }],
   },
   {
     section: "System",
