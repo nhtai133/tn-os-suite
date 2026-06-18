@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 const nav = [
   { href: "/dashboard", label: "CEO Dashboard", icon: "⬡" },
@@ -41,8 +42,9 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="p-4 border-t border-zinc-800">
-        <div className="text-xs text-zinc-600">v0.1.0 · Read-only sync</div>
+      <div className="p-4 border-t border-zinc-800 space-y-2">
+        <LogoutButton />
+        <div className="text-xs text-zinc-700">v2.1 · TN OS Suite</div>
       </div>
     </aside>
   );
