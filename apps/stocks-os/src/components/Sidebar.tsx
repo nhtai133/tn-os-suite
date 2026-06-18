@@ -7,10 +7,11 @@ const NAV = [
   {
     section: "Overview",
     items: [
-      { href: "/dashboard", label: "Dashboard" },
-      { href: "/reports",   label: "Reports" },
-      { href: "/income",    label: "Income" },
-      { href: "/dividends", label: "Dividends" },
+      { href: "/dashboard",   label: "Dashboard" },
+      { href: "/cio",         label: "AI CIO" },
+      { href: "/reports",     label: "Reports" },
+      { href: "/income",      label: "Income" },
+      { href: "/dividends",   label: "Dividends" },
     ],
   },
   {
@@ -47,10 +48,20 @@ const NAV = [
     ],
   },
   {
+    section: "Operations",
+    items: [
+      { href: "/rebalance",    label: "Rebalance" },
+      { href: "/brokers",      label: "Brokers" },
+      { href: "/import",       label: "Import" },
+      { href: "/prices",       label: "Price Sync" },
+    ],
+  },
+  {
     section: "System",
     items: [
-      { href: "/export", label: "Export Snapshot" },
-      { href: "/settings", label: "Settings" },
+      { href: "/wealth-sync",  label: "Wealth Sync" },
+      { href: "/export",       label: "Export Snapshot" },
+      { href: "/settings",     label: "Settings" },
     ],
   },
 ];
