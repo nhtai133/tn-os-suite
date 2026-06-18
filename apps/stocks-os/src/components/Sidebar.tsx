@@ -24,10 +24,15 @@ const NAV = [
     ],
   },
   {
+    section: "Hunting",
+    items: [
+      { href: "/watchlist", label: "Watchlist" },
+    ],
+  },
+  {
     section: "Legacy",
     items: [
       { href: "/holdings", label: "Holdings" },
-      { href: "/watchlist", label: "Watchlist" },
       { href: "/targets", label: "Target Positions" },
     ],
   },
