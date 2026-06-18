@@ -4,9 +4,25 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { section: "Overview", items: [{ href: "/dashboard", label: "Dashboard" }] },
   {
-    section: "Portfolio",
+    section: "Overview",
+    items: [
+      { href: "/dashboard", label: "Dashboard" },
+      { href: "/reports",   label: "Reports" },
+    ],
+  },
+  {
+    section: "Portfolios",
+    items: [
+      { href: "/portfolios/retirement-5", label: "Retirement 5%" },
+      { href: "/portfolios/hold-10y", label: "Hold 10Y" },
+      { href: "/portfolios/swing-3-6m", label: "Swing Trade" },
+      { href: "/portfolios/medium-3y", label: "Medium-Term 3Y" },
+      { href: "/portfolios/funds-etf", label: "CCQ & ETF" },
+    ],
+  },
+  {
+    section: "Legacy",
     items: [
       { href: "/holdings", label: "Holdings" },
       { href: "/watchlist", label: "Watchlist" },

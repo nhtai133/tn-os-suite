@@ -1,8 +1,8 @@
 import type { Holding, PortfolioTransaction } from "./portfolio-types";
 
-const VND_TO_USD = 25_000;
+export const VND_TO_USD = 25_000;
 
-function toUSD(amount: number, currency: "VND" | "USD"): number {
+export function toUSD(amount: number, currency: "VND" | "USD"): number {
   return currency === "USD" ? amount : amount / VND_TO_USD;
 }
 

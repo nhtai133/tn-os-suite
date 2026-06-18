@@ -1,18 +1,21 @@
 "use client";
 
 import { useCryptoStore } from "@/store/useCryptoStore";
+import { useLivePrices } from "@/hooks/useLivePrices";
 import { Card, StatWidget, Badge } from "@tn-os/ui";
 
 export default function DashboardPage() {
   const c = useCryptoStore();
+  const livePrices = useLivePrices(c.holdings.map((h) => h.symbol));
 
   if (!c.hydrated) return <div className="p-8 text-zinc-600 animate-pulse">Loading...</div>;
 
-  const totalValue = c.totalCryptoValueUSD;
+  const priceFor = (symbol: string, fallback: number) => livePrices.prices[symbol.toUpperCase()]?.usd ?? fallback;
+  const totalValue = c.holdings.reduce((sum, holding) => sum + holding.amount * priceFor(holding.symbol, holding.current_price), 0);
   const pnlMap = c.holdings.map((h) => ({
     symbol: h.symbol,
-    pnl: (h.current_price - h.avg_buy_price) * h.amount,
-    pct: h.avg_buy_price > 0 ? ((h.current_price - h.avg_buy_price) / h.avg_buy_price) * 100 : 0,
+    pnl: (priceFor(h.symbol, h.current_price) - h.avg_buy_price) * h.amount,
+    pct: h.avg_buy_price > 0 ? ((priceFor(h.symbol, h.current_price) - h.avg_buy_price) / h.avg_buy_price) * 100 : 0,
   }));
   const totalPnL = pnlMap.reduce((s, x) => s + x.pnl, 0);
 
@@ -29,7 +32,11 @@ export default function DashboardPage() {
     <div className="p-8 space-y-6 max-w-5xl">
       <div>
         <h1 className="text-2xl font-bold text-white">Crypto Dashboard</h1>
-        <p className="text-sm text-zinc-500 mt-0.5">Portfolio overview — holdings, DeFi, security</p>
+        <p className="text-sm text-zinc-500 mt-0.5">
+          Portfolio overview — holdings, DeFi, security
+          {livePrices.loading ? " · refreshing prices" : ""}
+          {livePrices.error ? ` · live prices unavailable: ${livePrices.error}` : ""}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -91,14 +98,15 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {topHoldings.map((h) => {
-                  const value = h.amount * h.current_price;
-                  const pct = h.avg_buy_price > 0 ? ((h.current_price - h.avg_buy_price) / h.avg_buy_price) * 100 : 0;
+                  const currentPrice = priceFor(h.symbol, h.current_price);
+                  const value = h.amount * currentPrice;
+                  const pct = h.avg_buy_price > 0 ? ((currentPrice - h.avg_buy_price) / h.avg_buy_price) * 100 : 0;
                   return (
                     <tr key={h.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/20">
                       <td className="py-2.5 pr-4 font-bold text-amber-400">{h.symbol}</td>
                       <td className="py-2.5 pr-4 text-zinc-200">{h.amount}</td>
                       <td className="py-2.5 pr-4 text-zinc-400">${h.avg_buy_price.toLocaleString()}</td>
-                      <td className="py-2.5 pr-4 text-zinc-200">${h.current_price.toLocaleString()}</td>
+                      <td className="py-2.5 pr-4 text-zinc-200">${currentPrice.toLocaleString()}</td>
                       <td className="py-2.5 pr-4 text-amber-400 font-medium">${value.toFixed(0)}</td>
                       <td className={`py-2.5 pr-4 font-medium ${pct >= 0 ? "text-emerald-400" : "text-red-400"}`}>{pct.toFixed(1)}%</td>
                     </tr>

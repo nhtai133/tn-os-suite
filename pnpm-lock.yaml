@@ -72,6 +72,9 @@ importers:
 
   apps/crypto-os:
     dependencies:
+      '@tn-os/market-data':
+        specifier: workspace:*
+        version: link:../../packages/market-data
       '@tn-os/schemas':
         specifier: workspace:*
         version: link:../../packages/schemas
@@ -369,6 +372,12 @@ importers:
       tailwindcss:
         specifier: ^3.4.3
         version: 3.4.19
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+
+  packages/market-data:
+    devDependencies:
       typescript:
         specifier: ^5.4.5
         version: 5.9.3

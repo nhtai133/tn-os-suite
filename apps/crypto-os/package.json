@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tn-os/schemas": "workspace:*",
+    "@tn-os/market-data": "workspace:*",
     "@tn-os/sync": "workspace:*",
     "@tn-os/ui": "workspace:*",
     "next": "^14.2.0",

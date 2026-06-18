@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useCryptoStore } from "@/store/useCryptoStore";
+import { useLivePrices } from "@/hooks/useLivePrices";
 import type { CryptoHolding } from "@/store/useCryptoStore";
 import { Card, Badge, Button } from "@tn-os/ui";
 
@@ -10,6 +11,7 @@ const emptyForm = (): FormState => ({ symbol: "", name: "", amount: "", avg_buy_
 
 export default function HoldingsPage() {
   const c = useCryptoStore();
+  const livePrices = useLivePrices(c.holdings.map((h) => h.symbol));
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<CryptoHolding | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
@@ -30,15 +32,20 @@ export default function HoldingsPage() {
   };
   const set = (key: keyof FormState, val: string) => setForm((f) => ({ ...f, [key]: val }));
 
-  const sorted = [...c.holdings].sort((a, b) => b.amount * b.current_price - a.amount * a.current_price);
-  const totalValue = sorted.reduce((s, h) => s + h.amount * h.current_price, 0);
+  const priceFor = (symbol: string, fallback: number) => livePrices.prices[symbol.toUpperCase()]?.usd ?? fallback;
+  const sorted = [...c.holdings].sort((a, b) => b.amount * priceFor(b.symbol, b.current_price) - a.amount * priceFor(a.symbol, a.current_price));
+  const totalValue = sorted.reduce((s, h) => s + h.amount * priceFor(h.symbol, h.current_price), 0);
 
   return (
     <div className="p-8 space-y-6 max-w-4xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Holdings</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">All crypto assets across wallets and exchanges</p>
+          <p className="text-sm text-zinc-500 mt-0.5">
+            All crypto assets across wallets and exchanges
+            {livePrices.loading ? " · refreshing prices" : ""}
+            {livePrices.error ? ` · live prices unavailable: ${livePrices.error}` : ""}
+          </p>
         </div>
         <Button variant="primary" onClick={openAdd}>+ Add Holding</Button>
       </div>
@@ -128,9 +135,10 @@ export default function HoldingsPage() {
               </thead>
               <tbody>
                 {sorted.map((h) => {
-                  const value = h.amount * h.current_price;
-                  const pnl = (h.current_price - h.avg_buy_price) * h.amount;
-                  const pct = h.avg_buy_price > 0 ? ((h.current_price - h.avg_buy_price) / h.avg_buy_price) * 100 : 0;
+                  const currentPrice = priceFor(h.symbol, h.current_price);
+                  const value = h.amount * currentPrice;
+                  const pnl = (currentPrice - h.avg_buy_price) * h.amount;
+                  const pct = h.avg_buy_price > 0 ? ((currentPrice - h.avg_buy_price) / h.avg_buy_price) * 100 : 0;
                   return (
                     <tr key={h.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/20">
                       <td className="py-2.5 pr-4">
@@ -139,7 +147,7 @@ export default function HoldingsPage() {
                       </td>
                       <td className="py-2.5 pr-4 text-zinc-200">{h.amount}</td>
                       <td className="py-2.5 pr-4 text-zinc-400">${h.avg_buy_price.toLocaleString()}</td>
-                      <td className="py-2.5 pr-4 text-zinc-200">${h.current_price.toLocaleString()}</td>
+                      <td className="py-2.5 pr-4 text-zinc-200">${currentPrice.toLocaleString()}</td>
                       <td className="py-2.5 pr-4 text-amber-400 font-medium">${value.toFixed(0)}</td>
                       <td className={`py-2.5 pr-4 font-medium ${pnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>${pnl.toFixed(0)} ({pct.toFixed(1)}%)</td>
                       <td className="py-2.5 pr-4 text-zinc-500 text-xs">{h.location}</td>
