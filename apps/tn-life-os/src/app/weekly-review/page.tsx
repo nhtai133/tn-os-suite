@@ -1,11 +1,22 @@
 "use client";
 
-import React from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSnapshotStore, CHILD_OS_TYPES, OS_LABELS } from "@/store/useSnapshotStore";
 import { useDecisionStore } from "@/store/useDecisionStore";
 import { isStale } from "@tn-os/sync";
 import { Card, Badge } from "@tn-os/ui";
 import type { TNOSSnapshot } from "@tn-os/schemas";
+
+const WEEKLY_REFLECTIONS_KEY = "tn_life_os_weekly_reflections";
+
+function isoWeekKey(): string {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+}
 
 function ScalarEntry({ label, value }: { label: string; value: string | number }) {
   return (
@@ -313,6 +324,28 @@ function BusinessReviewSection({ snap }: { snap: TNOSSnapshot }) {
 export default function WeeklyReviewPage() {
   const { snapshots, hydrated } = useSnapshotStore();
   const decisionStore = useDecisionStore();
+  const weekKey = useMemo(() => isoWeekKey(), []);
+  const [reflection, setReflection] = useState("");
+  const [reflectionLoaded, setReflectionLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(WEEKLY_REFLECTIONS_KEY);
+      const map: Record<string, string> = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+      setReflection(map[weekKey] ?? "");
+    } catch {}
+    setReflectionLoaded(true);
+  }, [weekKey]);
+
+  useEffect(() => {
+    if (!reflectionLoaded) return;
+    try {
+      const raw = localStorage.getItem(WEEKLY_REFLECTIONS_KEY);
+      const map: Record<string, string> = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+      map[weekKey] = reflection;
+      localStorage.setItem(WEEKLY_REFLECTIONS_KEY, JSON.stringify(map));
+    } catch {}
+  }, [reflection, reflectionLoaded, weekKey]);
 
   if (!hydrated || !decisionStore.hydrated) return <div className="p-4 md:p-8 text-zinc-600 animate-pulse">Loading...</div>;
 
@@ -424,6 +457,16 @@ export default function WeeklyReviewPage() {
           <p className="text-zinc-600">No snapshots imported yet. Import at least one OS snapshot to see your weekly review.</p>
         </div>
       )}
+
+      <Card title="Weekly Reflection">
+        <textarea
+          value={reflection}
+          onChange={(e) => setReflection(e.target.value)}
+          rows={5}
+          className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-200 outline-none focus:border-blue-500 resize-none"
+          placeholder="What defined this week? What carried forward? What should change next week?"
+        />
+      </Card>
     </div>
   );
 }
