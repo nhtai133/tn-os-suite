@@ -1,152 +1,473 @@
 "use client";
 
 import { useState } from "react";
-import { useStocksStore } from "@/store/useStocksStore";
-import type { CompanyThesis } from "@/store/useStocksStore";
-import { Card, Badge, Button } from "@tn-os/ui";
+import { useThesisStore } from "@/store/useThesisStore";
+import type { CompanyThesis, ReviewFrequency } from "@/lib/thesis-types";
+import { ThesisCard } from "@/components/thesis/ThesisCard";
+import { CatalystCard } from "@/components/thesis/CatalystCard";
+import { RiskCard } from "@/components/thesis/RiskCard";
+import { ReviewCard } from "@/components/thesis/ReviewCard";
 
-type FormState = { symbol: string; name: string; thesis: string; timeframe: string; conviction: string; catalysts: string; risks: string; status: CompanyThesis["status"] };
-const emptyForm = (): FormState => ({ symbol: "", name: "", thesis: "", timeframe: "12m", conviction: "7", catalysts: "", risks: "", status: "active" });
+const TABS = ["Thesis", "Catalysts", "Risks", "Exit Rules", "Review Schedule"] as const;
+type Tab = (typeof TABS)[number];
 
-const convictionColor = (n: number) => n >= 8 ? "text-emerald-400" : n >= 5 ? "text-sky-400" : "text-red-400";
-const statusVariant: Record<CompanyThesis["status"], "success" | "neutral" | "danger"> = { active: "success", fulfilled: "neutral", invalidated: "danger" };
+const FREQUENCIES: ReviewFrequency[] = ["Monthly", "Quarterly", "Semi-Annual", "Annual"];
+
+type FormState = {
+  symbol: string;
+  companyName: string;
+  sector: string;
+  whyBuy: string;
+  risks: string;
+  catalysts: string;
+  valuationNotes: string;
+  dividendPolicy: string;
+  exitRule: string;
+  reviewFrequency: ReviewFrequency | "";
+  nextReviewDate: string;
+  notes: string;
+};
+
+function emptyForm(): FormState {
+  return {
+    symbol: "", companyName: "", sector: "",
+    whyBuy: "", risks: "", catalysts: "",
+    valuationNotes: "", dividendPolicy: "", exitRule: "",
+    reviewFrequency: "Quarterly", nextReviewDate: "", notes: "",
+  };
+}
+
+function formToThesis(form: FormState): Omit<CompanyThesis, "id" | "createdAt" | "updatedAt"> {
+  return {
+    symbol: form.symbol.toUpperCase().trim(),
+    companyName: form.companyName.trim() || undefined,
+    sector: form.sector.trim() || undefined,
+    whyBuy: form.whyBuy.trim() || undefined,
+    risks: form.risks.trim() || undefined,
+    catalysts: form.catalysts.trim() || undefined,
+    valuationNotes: form.valuationNotes.trim() || undefined,
+    dividendPolicy: form.dividendPolicy.trim() || undefined,
+    exitRule: form.exitRule.trim() || undefined,
+    reviewFrequency: form.reviewFrequency || undefined,
+    nextReviewDate: form.nextReviewDate || undefined,
+    notes: form.notes.trim() || undefined,
+  };
+}
+
+function thesisToForm(t: CompanyThesis): FormState {
+  return {
+    symbol: t.symbol,
+    companyName: t.companyName ?? "",
+    sector: t.sector ?? "",
+    whyBuy: t.whyBuy ?? "",
+    risks: t.risks ?? "",
+    catalysts: t.catalysts ?? "",
+    valuationNotes: t.valuationNotes ?? "",
+    dividendPolicy: t.dividendPolicy ?? "",
+    exitRule: t.exitRule ?? "",
+    reviewFrequency: t.reviewFrequency ?? "Quarterly",
+    nextReviewDate: t.nextReviewDate ?? "",
+    notes: t.notes ?? "",
+  };
+}
 
 export default function ThesisPage() {
-  const s = useStocksStore();
-  const [formOpen, setFormOpen] = useState(false);
+  const store = useThesisStore();
+  const [tab, setTab] = useState<Tab>("Thesis");
+  const [search, setSearch] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CompanyThesis | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
-  const [filter, setFilter] = useState<CompanyThesis["status"] | "all">("all");
 
-  if (!s.hydrated) return <div className="p-8 text-zinc-600 animate-pulse">Loading...</div>;
+  if (!store.hydrated) {
+    return <div className="p-8 text-zinc-600 animate-pulse">Loading...</div>;
+  }
 
-  const openAdd = () => { setEditing(null); setForm(emptyForm()); setFormOpen(true); };
-  const openEdit = (t: CompanyThesis) => {
-    setEditing(t);
-    setForm({ symbol: t.symbol, name: t.name, thesis: t.thesis, timeframe: t.timeframe, conviction: String(t.conviction), catalysts: t.catalysts.join(", "), risks: t.risks.join(", "), status: t.status });
-    setFormOpen(true);
+  const { theses, addThesis, updateThesis, deleteThesis, getDueForReview } = store;
+
+  const openAdd = () => { setEditing(null); setForm(emptyForm()); setModalOpen(true); };
+  const openEdit = (t: CompanyThesis) => { setEditing(t); setForm(thesisToForm(t)); setModalOpen(true); };
+  const closeModal = () => setModalOpen(false);
+
+  const handleSubmit = (ev: React.FormEvent) => {
+    ev.preventDefault();
+    const payload = formToThesis(form);
+    if (editing) updateThesis({ ...payload, id: editing.id, createdAt: editing.createdAt, updatedAt: editing.updatedAt });
+    else addThesis(payload);
+    closeModal();
   };
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const payload = {
-      symbol: form.symbol.toUpperCase().trim(), name: form.name.trim(), thesis: form.thesis.trim(), timeframe: form.timeframe.trim(),
-      conviction: parseInt(form.conviction) || 5,
-      catalysts: form.catalysts.split(",").map((s) => s.trim()).filter(Boolean),
-      risks: form.risks.split(",").map((s) => s.trim()).filter(Boolean),
-      status: form.status,
-    };
-    if (editing) { s.updateThesis({ ...editing, ...payload }); } else { s.addThesis(payload); }
-    setFormOpen(false);
-  };
-  const set = (key: keyof FormState, val: string) => setForm((f) => ({ ...f, [key]: val }));
 
-  const filtered = filter === "all" ? s.theses : s.theses.filter((t) => t.status === filter);
+  const set = (key: keyof FormState, val: string) =>
+    setForm((f) => ({ ...f, [key]: val }));
+
+  const filtered = search
+    ? theses.filter(
+        (t) =>
+          t.symbol.includes(search.toUpperCase()) ||
+          (t.companyName ?? "").toLowerCase().includes(search.toLowerCase()) ||
+          (t.sector ?? "").toLowerCase().includes(search.toLowerCase())
+      )
+    : theses;
+
+  const dueForReview = getDueForReview();
+
+  // Exit rules: theses that have exitRule defined
+  const withExitRule = theses.filter((t) => t.exitRule);
+
+  // Review schedule: sorted by nextReviewDate
+  const reviewSorted = [...theses]
+    .filter((t) => t.nextReviewDate)
+    .sort((a, b) => (a.nextReviewDate ?? "").localeCompare(b.nextReviewDate ?? ""));
+  const noReviewDate = theses.filter((t) => !t.nextReviewDate);
 
   return (
-    <div className="p-8 space-y-6 max-w-3xl">
+    <div className="p-8 space-y-6 max-w-5xl">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Company Thesis</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">Investment theses with catalysts and risks</p>
+          <p className="text-sm text-zinc-500 mt-0.5">Investment thesis · Catalysts · Risks · Exit rules</p>
         </div>
-        <Button variant="primary" onClick={openAdd}>+ Add Thesis</Button>
+        <button
+          onClick={openAdd}
+          className="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-white text-sm font-medium transition-colors"
+        >
+          + Add Thesis
+        </button>
       </div>
 
-      <div className="flex gap-2">
-        {(["all", "active", "fulfilled", "invalidated"] as const).map((st) => (
-          <button key={st} onClick={() => setFilter(st)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === st ? "bg-sky-500/20 text-sky-400 border border-sky-500/30" : "text-zinc-500 hover:text-zinc-300 border border-transparent"}`}>
-            {st === "all" ? `All (${s.theses.length})` : `${st.charAt(0).toUpperCase() + st.slice(1)} (${s.theses.filter((t) => t.status === st).length})`}
+      {/* Stats + Due Alert */}
+      {dueForReview.length > 0 && (
+        <div
+          className="rounded-lg bg-amber-500/10 border border-amber-500/30 px-4 py-3 text-sm text-amber-400 cursor-pointer"
+          onClick={() => setTab("Review Schedule")}
+        >
+          ⚠ {dueForReview.length} thesis review{dueForReview.length !== 1 ? "es" : ""} due — click to view
+        </div>
+      )}
+
+      <div className="flex items-center gap-4 text-xs text-zinc-500">
+        <span>{theses.length} theses</span>
+        <span>·</span>
+        <span>{theses.filter((t) => t.catalysts).length} with catalysts</span>
+        <span>·</span>
+        <span>{theses.filter((t) => t.risks).length} with risks</span>
+        <span>·</span>
+        <span>{withExitRule.length} with exit rules</span>
+      </div>
+
+      {/* Tab Nav */}
+      <div className="flex gap-1 border-b border-zinc-800">
+        {TABS.map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+              tab === t ? "border-sky-500 text-sky-400" : "border-transparent text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            {t}
+            {t === "Review Schedule" && dueForReview.length > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-400 text-[10px]">
+                {dueForReview.length}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {formOpen && (
-        <Card title={editing ? "Edit Thesis" : "Add Company Thesis"}>
-          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs text-zinc-400 mb-1 block">Symbol *</label>
-                <input required value={form.symbol} onChange={(e) => set("symbol", e.target.value)}
-                  className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500" placeholder="VCB" />
-              </div>
-              <div>
-                <label className="text-xs text-zinc-400 mb-1 block">Company Name *</label>
-                <input required value={form.name} onChange={(e) => set("name", e.target.value)}
-                  className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500" placeholder="Vietcombank" />
-              </div>
-              <div>
-                <label className="text-xs text-zinc-400 mb-1 block">Timeframe</label>
-                <input value={form.timeframe} onChange={(e) => set("timeframe", e.target.value)}
-                  className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500" placeholder="12m / 3y" />
-              </div>
-              <div>
-                <label className="text-xs text-zinc-400 mb-1 block">Conviction (1–10)</label>
-                <input type="number" min="1" max="10" value={form.conviction} onChange={(e) => set("conviction", e.target.value)}
-                  className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500" />
-              </div>
-              <div>
-                <label className="text-xs text-zinc-400 mb-1 block">Status</label>
-                <select value={form.status} onChange={(e) => set("status", e.target.value as CompanyThesis["status"])}
-                  className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500">
-                  {["active", "fulfilled", "invalidated"].map((st) => <option key={st} value={st}>{st}</option>)}
-                </select>
-              </div>
-              <div className="col-span-2">
-                <label className="text-xs text-zinc-400 mb-1 block">Thesis *</label>
-                <textarea required value={form.thesis} onChange={(e) => set("thesis", e.target.value)} rows={3}
-                  className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 resize-none" placeholder="Why you believe in this company..." />
-              </div>
-              <div>
-                <label className="text-xs text-zinc-400 mb-1 block">Catalysts (comma-separated)</label>
-                <input value={form.catalysts} onChange={(e) => set("catalysts", e.target.value)}
-                  className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500" placeholder="Credit growth, Dividend, NIM expansion" />
-              </div>
-              <div>
-                <label className="text-xs text-zinc-400 mb-1 block">Risks (comma-separated)</label>
-                <input value={form.risks} onChange={(e) => set("risks", e.target.value)}
-                  className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500" placeholder="NPL rise, Rate cuts, Regulation" />
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Button variant="primary" type="submit">{editing ? "Save" : "Add"}</Button>
-              <Button variant="ghost" type="button" onClick={() => setFormOpen(false)}>Cancel</Button>
-            </div>
-          </form>
-        </Card>
+      {/* Search */}
+      {(tab === "Thesis" || tab === "Catalysts" || tab === "Risks") && (
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search symbol, company, sector..."
+          className="w-full max-w-sm rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-sky-500"
+        />
       )}
 
-      <div className="space-y-3">
-        {filtered.length === 0 && <Card title="No theses"><p className="text-zinc-600 text-sm mt-2">No theses yet.</p></Card>}
-        {filtered.map((t) => (
-          <Card key={t.id} title={`${t.symbol} — ${t.name}`}
-            action={
-              <div className="flex items-center gap-2">
-                <Badge variant={statusVariant[t.status]}>{t.status}</Badge>
-                <button onClick={() => openEdit(t)} className="text-xs text-zinc-400 hover:text-white">Edit</button>
-                <button onClick={() => s.deleteThesis(t.id)} className="text-xs text-red-500 hover:text-red-400">Delete</button>
-              </div>
-            }>
-            <div className="mt-2 flex items-center gap-4 text-sm">
-              <div><span className="text-zinc-500 text-xs">Conviction </span><span className={`font-semibold ${convictionColor(t.conviction)}`}>{t.conviction}/10</span></div>
-              <div><span className="text-zinc-500 text-xs">Timeframe </span><span className="text-zinc-300">{t.timeframe}</span></div>
+      {/* ── Thesis Tab ── */}
+      {tab === "Thesis" && (
+        <>
+          {filtered.length === 0 ? (
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-6 py-12 text-center text-sm text-zinc-500">
+              {theses.length === 0
+                ? "No theses yet. Click + Add Thesis to document your first investment thesis."
+                : "No results for your search."}
             </div>
-            <p className="mt-2 text-sm text-zinc-400 leading-relaxed">{t.thesis}</p>
-            {t.catalysts.length > 0 && (
-              <div className="mt-2">
-                <div className="text-xs text-zinc-500 mb-1">Catalysts</div>
-                <div className="flex flex-wrap gap-1">{t.catalysts.map((c, i) => <span key={i} className="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded">{c}</span>)}</div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {filtered.map((t) => (
+                <ThesisCard key={t.id} thesis={t} onEdit={openEdit} onDelete={deleteThesis} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Catalysts Tab ── */}
+      {tab === "Catalysts" && (
+        <>
+          {filtered.length === 0 ? (
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-6 py-12 text-center text-sm text-zinc-500">
+              No theses match.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {filtered.map((t) => (
+                <CatalystCard key={t.id} thesis={t} onEdit={openEdit} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Risks Tab ── */}
+      {tab === "Risks" && (
+        <>
+          {filtered.length === 0 ? (
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-6 py-12 text-center text-sm text-zinc-500">
+              No theses match.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {filtered.map((t) => (
+                <RiskCard key={t.id} thesis={t} onEdit={openEdit} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Exit Rules Tab ── */}
+      {tab === "Exit Rules" && (
+        <div className="space-y-3">
+          {withExitRule.length === 0 ? (
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-6 py-12 text-center text-sm text-zinc-500">
+              No exit rules documented. Edit a thesis to add an exit rule.
+            </div>
+          ) : (
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-800 text-zinc-500 text-xs uppercase tracking-wide">
+                    <th className="px-4 py-3 text-left">Symbol</th>
+                    <th className="px-4 py-3 text-left">Company</th>
+                    <th className="px-4 py-3 text-left">Exit Rule</th>
+                    <th className="px-4 py-3 text-right" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {withExitRule.map((t) => (
+                    <tr key={t.id} className="border-b border-zinc-800/60 hover:bg-zinc-800/30 transition-colors">
+                      <td className="px-4 py-3 font-medium text-white">{t.symbol}</td>
+                      <td className="px-4 py-3 text-zinc-400 text-xs">{t.companyName ?? "—"}</td>
+                      <td className="px-4 py-3 text-zinc-300 text-xs leading-relaxed max-w-sm">{t.exitRule}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => openEdit(t)}
+                          className="text-xs text-sky-400 hover:text-sky-300 transition-colors"
+                        >
+                          Edit
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Theses without exit rules */}
+          {theses.filter((t) => !t.exitRule).length > 0 && (
+            <div className="rounded-xl border border-zinc-800/50 bg-zinc-900/20 px-4 py-3">
+              <div className="text-xs text-zinc-600 mb-2">Missing exit rules ({theses.filter((t) => !t.exitRule).length})</div>
+              <div className="flex flex-wrap gap-2">
+                {theses.filter((t) => !t.exitRule).map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => openEdit(t)}
+                    className="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-500 hover:text-sky-400 hover:bg-zinc-700 transition-colors"
+                  >
+                    {t.symbol}
+                  </button>
+                ))}
               </div>
-            )}
-            {t.risks.length > 0 && (
-              <div className="mt-2">
-                <div className="text-xs text-zinc-500 mb-1">Risks</div>
-                <div className="flex flex-wrap gap-1">{t.risks.map((r, i) => <span key={i} className="text-xs bg-red-500/10 text-red-400 px-2 py-0.5 rounded">{r}</span>)}</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Review Schedule Tab ── */}
+      {tab === "Review Schedule" && (
+        <div className="space-y-4">
+          {dueForReview.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-amber-400 uppercase tracking-widest mb-2">Overdue</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {dueForReview.map((t) => (
+                  <ReviewCard key={t.id} thesis={t} onEdit={openEdit} />
+                ))}
               </div>
-            )}
-          </Card>
-        ))}
-      </div>
+            </div>
+          )}
+
+          {reviewSorted.filter((t) => !dueForReview.find((d) => d.id === t.id)).length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-2">Upcoming</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {reviewSorted
+                  .filter((t) => !dueForReview.find((d) => d.id === t.id))
+                  .map((t) => (
+                    <ReviewCard key={t.id} thesis={t} onEdit={openEdit} />
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {noReviewDate.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-2">No Review Date</div>
+              <div className="flex flex-wrap gap-2">
+                {noReviewDate.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => openEdit(t)}
+                    className="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-500 hover:text-sky-400 hover:bg-zinc-700 transition-colors"
+                  >
+                    {t.symbol}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {theses.length === 0 && (
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-6 py-12 text-center text-sm text-zinc-500">
+              No theses yet.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Add/Edit Modal ── */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl overflow-y-auto max-h-[90vh]">
+            <div className="px-6 py-5 border-b border-zinc-800 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-white">
+                {editing ? `Edit Thesis — ${editing.symbol}` : "Add Thesis"}
+              </h2>
+              <button onClick={closeModal} className="text-zinc-500 hover:text-zinc-300 text-lg">✕</button>
+            </div>
+            <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-zinc-400 mb-1 block">Symbol *</label>
+                  <input
+                    required
+                    value={form.symbol}
+                    onChange={(e) => set("symbol", e.target.value)}
+                    placeholder="VCB"
+                    className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-400 mb-1 block">Company Name</label>
+                  <input
+                    value={form.companyName}
+                    onChange={(e) => set("companyName", e.target.value)}
+                    placeholder="Vietcombank"
+                    className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-400 mb-1 block">Sector</label>
+                  <input
+                    value={form.sector}
+                    onChange={(e) => set("sector", e.target.value)}
+                    placeholder="Banking"
+                    className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-400 mb-1 block">Review Frequency</label>
+                  <select
+                    value={form.reviewFrequency}
+                    onChange={(e) => set("reviewFrequency", e.target.value)}
+                    className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
+                  >
+                    <option value="">— None —</option>
+                    {FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-zinc-400 mb-1 block">Next Review Date</label>
+                  <input
+                    type="date"
+                    value={form.nextReviewDate}
+                    onChange={(e) => set("nextReviewDate", e.target.value)}
+                    className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-zinc-400 mb-1 block">Why Buy</label>
+                  <textarea rows={3} value={form.whyBuy} onChange={(e) => set("whyBuy", e.target.value)}
+                    placeholder="Core investment thesis..."
+                    className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 resize-none" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-zinc-400 mb-1 block">Catalysts</label>
+                  <textarea rows={2} value={form.catalysts} onChange={(e) => set("catalysts", e.target.value)}
+                    placeholder="Near-term catalysts..."
+                    className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 resize-none" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-zinc-400 mb-1 block">Risks</label>
+                  <textarea rows={2} value={form.risks} onChange={(e) => set("risks", e.target.value)}
+                    placeholder="Key risks and mitigants..."
+                    className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 resize-none" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-zinc-400 mb-1 block">Exit Rule</label>
+                  <textarea rows={2} value={form.exitRule} onChange={(e) => set("exitRule", e.target.value)}
+                    placeholder="Sell when thesis is broken, target hit, or..."
+                    className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 resize-none" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-zinc-400 mb-1 block">Valuation Notes</label>
+                  <textarea rows={2} value={form.valuationNotes} onChange={(e) => set("valuationNotes", e.target.value)}
+                    placeholder="P/E, P/B, DCF assumptions..."
+                    className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 resize-none" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-zinc-400 mb-1 block">Dividend Policy</label>
+                  <input value={form.dividendPolicy} onChange={(e) => set("dividendPolicy", e.target.value)}
+                    placeholder="Annual 10% stock dividend..."
+                    className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs text-zinc-400 mb-1 block">Notes</label>
+                  <textarea rows={2} value={form.notes} onChange={(e) => set("notes", e.target.value)}
+                    placeholder="Miscellaneous notes..."
+                    className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 resize-none" />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button type="submit"
+                  className="px-5 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-white text-sm font-medium transition-colors">
+                  {editing ? "Save Changes" : "Add Thesis"}
+                </button>
+                <button type="button" onClick={closeModal}
+                  className="px-5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

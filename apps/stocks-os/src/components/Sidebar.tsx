@@ -27,6 +27,7 @@ const NAV = [
     section: "Hunting",
     items: [
       { href: "/watchlist", label: "Watchlist" },
+      { href: "/thesis",    label: "Thesis" },
     ],
   },
   {
